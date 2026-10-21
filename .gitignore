@@ -1,0 +1,23 @@
+.DS_Store
+# Captures réseau, APK, secrets : jamais dans le dépôt
+captures/
+apk/
+*.har
+*.apk
+*.ipa
+.env
+secrets.*
+build/
+DerivedData/
+ref/
+.build/
+__pycache__/
+*.pyc
+.swiftpm/
+.venv/
+server/data/
+iosApp/*.xcodeproj/
+iosApp/build/
+.venv/
+# Version publique fabriquée par scripts/export-public.sh
+public-export/

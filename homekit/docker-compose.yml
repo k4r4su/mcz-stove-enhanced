@@ -1,0 +1,20 @@
+# Pont HomeKit (stack à part). `network_mode: host` est indispensable : HomeKit découvre l'accessoire par mDNS sur le réseau local,
+# ce que le réseau Docker isolé ne laisse pas passer. Il parle à mcz-bridge par HTTPS (jeton BRIDGE_TOKEN).
+services:
+  mcz-homekit:
+    build: .
+    image: mcz-homekit:latest
+    pull_policy: build
+    container_name: mcz-homekit
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      BRIDGE_URL: ${BRIDGE_URL:-http://127.0.0.1:8001}   # port local de mcz-bridge (sans passer par Internet)
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN}
+      HOMEKIT_NAME: ${HOMEKIT_NAME:-Poêle}
+      HOMEKIT_PIN: ${HOMEKIT_PIN:-}
+      DATA_DIR: /data
+    volumes:
+      - homekit-data:/data
+volumes:
+  homekit-data:

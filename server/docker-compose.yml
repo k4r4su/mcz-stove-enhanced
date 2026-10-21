@@ -1,0 +1,32 @@
+# mcz-bridge seul, web app sur http://<ip-de-la-machine>:${PORT:-8000}.
+# Avec un nom de domaine et HTTPS (indispensable pour les notifications sur iPhone et l'accès hors de la maison) :
+# docker-compose.traefik.yml. Voir docs/installation.md.
+services:
+  mcz-bridge:
+    build: .
+    image: mcz-bridge:latest
+    pull_policy: build   # toujours reconstruire depuis le dépôt (l'image n'est publiée sur aucun registre)
+    container_name: mcz-bridge
+    restart: unless-stopped
+    environment:
+      MCZ_USER: ${MCZ_USER:?MCZ_USER manquant (e-mail du compte Maestro+)}
+      MCZ_PASSWORD: ${MCZ_PASSWORD:-}
+      MCZ_PASSWORD_B64: ${MCZ_PASSWORD_B64:-}
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN:?BRIDGE_TOKEN manquant (openssl rand -hex 32)}
+      POLL_SECONDS: "5"
+      DB_PATH: /srv/data/history.sqlite
+      TIMEZONE: ${TIMEZONE:-Europe/Paris}
+      PELLET_CAPACITY_KG: ${PELLET_CAPACITY_KG:-16}
+      WEATHER_LAT: ${WEATHER_LAT:-}
+      WEATHER_LON: ${WEATHER_LON:-}
+      WEB_USER: ${WEB_USER:-}
+      WEB_PASSWORD: ${WEB_PASSWORD:-}
+      WEB_PASSWORD_B64: ${WEB_PASSWORD_B64:-}
+      PUSH_SUBJECT: ${PUSH_SUBJECT:-}
+    volumes:
+      - mcz-data:/srv/data   # historique, plages, réglages, clé des notifications : à sauvegarder
+    ports:
+      - "${PORT:-8000}:8000"
+
+volumes:
+  mcz-data:

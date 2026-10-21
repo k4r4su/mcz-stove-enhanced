@@ -1,0 +1,9 @@
+{
+  "name": "MCZ Poele Enhanced",
+  "short_name": "Poêle",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141210",
+  "theme_color": "#e8742a",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

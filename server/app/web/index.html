@@ -1,0 +1,1209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Poêle MCZ</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg">
+<meta name="theme-color" content="#1d1a17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+/* Même logique que l'app iPhone : lisible d'abord, orange = chauffe, violet = programme Maestro. */
+:root {
+  --bg: #f4f1ee; --card: #ffffff; --ink: #1d1a17; --muted: #6d655e; --line: #e4ddd6; --fill: #ece6e0;
+  --accent: #d9661c; --accent-ink: #ffffff; --ok: #2e8b57; --warn: #c26a12; --bad: #c0392b;
+  --cold: #3a86c8; --cool: #2aa6b8; --mild: #3f9c58; --maestro: #8b5cf6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141210; --card: #1f1c19; --ink: #f2ede8; --muted: #a39a91; --line: #332e29; --fill: #2b2723;
+    --accent: #ee8236; --accent-ink: #1d1a17; --ok: #5cc483; --warn: #f0a24a; --bad: #ef6b5b;
+    --cold: #6aaef0; --cool: #4cc6d6; --mild: #6cc483; --maestro: #a78bfa;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141210; --card: #1f1c19; --ink: #f2ede8; --muted: #a39a91; --line: #332e29; --fill: #2b2723;
+  --accent: #ee8236; --accent-ink: #1d1a17; --ok: #5cc483; --warn: #f0a24a; --bad: #ef6b5b;
+  --cold: #6aaef0; --cool: #4cc6d6; --mild: #6cc483; --maestro: #a78bfa;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  padding: 0 16px calc(96px + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+main { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+header.top { display: flex; align-items: center; justify-content: space-between; }
+h1 { font-size: 32px; margin: 8px 0 0; letter-spacing: -0.02em; }
+h2 { font-size: 17px; margin: 0; }
+.card { background: var(--card); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row.spread { justify-content: space-between; }
+.wrap { flex-wrap: wrap; }
+button, .btn {
+  font: inherit; border: 0; border-radius: 12px; padding: 10px 14px; background: var(--fill); color: var(--ink); cursor: pointer;
+}
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: default; }
+.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.link { background: none; color: var(--accent); padding: 6px 0; }
+.big { width: 100%; padding: 16px; font-size: 19px; font-weight: 600; border-radius: 16px; }
+.icon-btn { width: 44px; height: 44px; border-radius: 22px; display: inline-grid; place-items: center; padding: 0; background: var(--card); }
+.status { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.phase { font-size: 20px; font-weight: 600; }
+.temp-big { font-size: 64px; font-weight: 600; letter-spacing: -0.02em; text-align: center; line-height: 1.1; }
+.setpoint { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
+.step { width: 64px; height: 64px; border-radius: 50%; font-size: 30px; font-weight: 700; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.setpoint .value { text-align: center; }
+.setpoint .value strong { font-size: 36px; display: block; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--fill); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg button { background: none; padding: 9px 4px; border-radius: 10px; font-size: 15px; }
+.seg button[aria-pressed="true"] { background: var(--card); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.seg.modes button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; font-size: 14px; }
+.seg.modes .mi { font-size: 22px; line-height: 1.1; }
+.seg.modes button[aria-pressed="false"] .mi { filter: saturate(.6); opacity: .8; }
+.kv { display: flex; justify-content: space-between; }
+.kv span:first-child { color: var(--muted); }
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.slot { border-radius: 14px; padding: 10px 6px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.slot .h { font-size: 13px; color: var(--muted); }
+.slot .t { font-size: 22px; font-weight: 600; }
+.advice { font-size: 14px; font-weight: 500; }
+.bar { position: relative; height: 14px; border-radius: 7px; background: var(--fill); overflow: hidden; }
+.bar.thin { height: 6px; border-radius: 3px; }
+.bar i { position: absolute; top: 0; bottom: 0; border-radius: 7px; background: var(--accent); }
+.bar i.off { background: var(--muted); opacity: .5; }
+.bar.thin i { background: var(--maestro); border-radius: 3px; }
+.bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+.day { border: 0; background: none; text-align: left; padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; width: 100%; border-radius: 0; }
+.day:first-child { border-top: 0; }
+.chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.mini { display: flex; gap: 14px; font-size: 13px; }
+.warn { color: var(--warn); }
+.err { color: var(--bad); }
+.okc { color: var(--ok); }
+.list-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.list-item:first-child { border-top: 0; }
+.list-item .grow { flex: 1; min-width: 0; }
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; gap: 4px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+}
+nav.tabs button { background: none; flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; padding: 6px; }
+nav.tabs button svg { width: 24px; height: 24px; }
+nav.tabs button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+.toast {
+  position: fixed; left: 16px; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 520px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; font-weight: 500; box-shadow: 0 6px 24px rgb(0 0 0 / .18);
+}
+dialog { border: 1px solid var(--line); border-radius: 20px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px);
+  background: var(--bg); color: var(--ink); box-shadow: 0 18px 60px rgb(0 0 0 / .45); }
+/* Même fond que la page : sans flou ni voile assez sombre, la fenêtre se confondait avec ce qu'il y a derrière. */
+dialog::backdrop { background: rgb(0 0 0 / .55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+dialog .sheet { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+dialog header { display: flex; justify-content: space-between; align-items: center; }
+input, select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+input[type="time"] { font-size: 28px; font-weight: 600; text-align: center; width: 100%; }
+.times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.times > div { display: flex; flex-direction: column; gap: 6px; align-items: stretch; text-align: center; }
+.nudges { display: flex; gap: 8px; justify-content: center; }
+.daychips { display: flex; gap: 6px; flex-wrap: wrap; }
+.daychips button { width: 40px; height: 40px; border-radius: 50%; padding: 0; font-weight: 600; }
+.daychips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+svg.chart text { fill: var(--muted); font-size: 10px; }
+svg.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chartwrap { position: relative; touch-action: pan-y; cursor: crosshair; }
+.chartwrap svg { display: block; width: 100%; height: auto; }
+.tip { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; white-space: nowrap; background: var(--ink); color: var(--card);
+  border-radius: 10px; padding: 6px 10px; font-size: 13px; line-height: 1.4; box-shadow: 0 4px 14px rgb(0 0 0 / .2); font-variant-numeric: tabular-nums; }
+.tip strong { font-size: 15px; }
+.tag { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); white-space: nowrap; }
+.jtime { width: 46px; flex: none; align-self: flex-start; padding-top: 1px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.badge { font-size: 13px; font-weight: 600; white-space: nowrap; align-self: flex-start; padding-top: 2px; }
+.notice { border: 1.5px solid color-mix(in srgb, var(--c, var(--accent)) 45%, transparent); background: color-mix(in srgb, var(--c, var(--accent)) 8%, var(--card)); }
+.skipped .bar { opacity: .35; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+input[type="date"], input[type="datetime-local"] { width: 100%; font-size: 18px; }
+.reach { font-size: 17px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tile { background: var(--fill); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile strong { font-size: 21px; letter-spacing: -0.01em; }
+table.simple { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.simple th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 4px 6px 4px 0; }
+table.simple td { padding: 6px 6px 6px 0; border-top: 1px solid var(--line); }
+.progress { height: 8px; background: var(--fill); border-radius: 4px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: rise .2s ease-out; } @keyframes rise { from { transform: translateY(8px); opacity: 0; } } }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<div id="toast" class="toast" hidden role="status"></div>
+<nav class="tabs" aria-label="Onglets">
+  <button data-tab="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 2c1 4.5 6 6.5 6 12.5a6.5 6.5 0 0 1-13 0c0-3 1.5-5 3.5-6.5 0 2.5 1 4 2.5 4.5-1-3.5 0-7.5 1-10.5z"/></svg>Poêle</button>
+  <button data-tab="planning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Planning</button>
+  <button data-tab="charts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M6 15l4-5 4 3 5-7"/></svg>Courbes</button>
+  <button data-tab="journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor"/><circle cx="4" cy="12" r="1.2" fill="currentColor"/><circle cx="4" cy="18" r="1.2" fill="currentColor"/></svg>Journal</button>
+</nav>
+<dialog id="dlg"><div class="sheet" id="dlgBody"></div></dialog>
+
+<script>
+"use strict";
+const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+const LETTERS = ["L", "M", "M", "J", "V", "S", "D"];
+const MODES = { manual: "Manuel", auto: "Auto", overnight: "Nuit", comfort: "Confort" };
+const MODE_ICONS = { manual: "🎚️", auto: "✨", overnight: "🌙", comfort: "🛋️" };
+const PHASES = { on: "En marche", off: "Éteint", "turning-on": "Allumage", "turning-off": "Extinction", "cooling-down": "Refroidissement" };
+const S = { snap: null, timers: [], plages: [], overview: { upcoming: [], recent: [] }, official: null, weather: null,
+            history: [], outdoor: [], insights: null, span: 7, proj: null, projError: null, pellets: null, tab: "home", pendingSetpoint: null, busy: false, hours: 24,
+            canUndo: false, error: null, lastRefresh: null, planningError: null, loginEnabled: false, needLogin: false,
+            journal: [], jdays: 7, journalError: null, tips: {}, hover: null };
+
+// ---------- Outils ----------
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = { get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const fr = (v, d = 1) => Number(v).toFixed(d).replace(".", ",");
+const eur = (v) => (v == null ? "—" : v.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: v >= 100 ? 0 : 2 }));
+const hm = (min) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`);
+const hhmm = (ts) => new Date(ts * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const threshold = () => Number(store.get("mcz.threshold")) || 19;   // seuil de confort de la prévision, propre à ce téléphone
+const fmtT = (v) => (v == null ? "—" : `${Number(v).toFixed(1)} °C`);
+const toMin = (hhmm) => { const [h, m] = String(hhmm).split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+const toHHMM = (m) => { m = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const dur = (a, b) => { const d = b <= a ? 1440 - a + b : b - a; const h = Math.floor(d / 60), m = d % 60; return h ? (m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`) : `${m} min`; };
+const todayIdx = () => (new Date().getDay() + 6) % 7;     // 0 = lundi
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const sid = () => encodeURIComponent(S.snap?.stove_id || "");
+const fmtDT = (ts) => new Date(ts * 1000).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDay = (d) => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const nextDateFor = (day) => { const d = new Date(); d.setDate(d.getDate() + ((day - todayIdx() + 7) % 7)); return d; };
+const localInput = (d) => `${isoLocal(d)}T${toHHMM(d.getHours() * 60 + d.getMinutes())}`;
+const when = (ts) => {
+  const d = new Date(ts * 1000), now = new Date(), t = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const days = Math.round((new Date(d.toDateString()) - new Date(now.toDateString())) / 86400000);
+  return days === 0 ? `aujourd'hui ${t}` : days === 1 ? `demain ${t}` : days === -1 ? `hier ${t}` : `${d.toLocaleDateString("fr-FR", { weekday: "short" })} ${t}`;
+};
+// Jeton : sur ce serveur local seulement, ?token= le pré-remplit (tests). Sinon il se saisit dans Réglages.
+if (["localhost", "127.0.0.1"].includes(location.hostname)) { const q = new URLSearchParams(location.search); if (q.get("token")) store.set("mcz.token", q.get("token")); if (q.get("tab")) store.set("mcz.tab", q.get("tab")); }
+
+async function api(path, { method = "GET", body } = {}) {
+  const res = await fetch(path, { method, headers: { Authorization: "Bearer " + store.get("mcz.token"), ...(body ? { "Content-Type": "application/json" } : {}) },
+                                  body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 401 && !path.startsWith("/api/login")) {
+    if (S.loginEnabled) { store.set("mcz.token", ""); S.needLogin = true; render(); throw new Error("Session expirée : reconnecte-toi."); }
+    throw new Error("Jeton refusé : ouvre les réglages (roue crantée).");
+  }
+  const data = (res.headers.get("content-type") || "").includes("json") ? await res.json() : null;
+  if (!res.ok) throw new Error((data && data.detail) || `Le serveur répond ${res.status}`);
+  return data;
+}
+
+let toastTimer;
+function toast(text, kind = "info", sticky = false) {
+  const el = document.getElementById("toast");
+  el.hidden = false; el.textContent = text;
+  el.style.color = kind === "ok" ? "var(--ok)" : kind === "bad" ? "var(--warn)" : "var(--ink)";
+  clearTimeout(toastTimer);
+  if (!sticky) toastTimer = setTimeout(() => (el.hidden = true), 6000);
+}
+
+// ---------- Données ----------
+async function refresh() {
+  if (!store.get("mcz.token")) { if (S.loginEnabled) S.needLogin = true; else S.error = "Indique le jeton du serveur dans les réglages."; render(); return; }
+  try {
+    const { stoves } = await api("/api/stoves");
+    if (stoves[0]) { S.snap = stoves[0]; try { S.timers = (await api(`/api/stoves/${sid()}/timers`)).timers; } catch {} }
+    S.error = null; S.lastRefresh = new Date();
+  } catch (e) { S.error = e.message; }
+  render();
+}
+async function loadWeather() { try { S.weather = await api("/api/weather"); } catch (e) { S.weather = S.weather || { error: e.message }; } render(); }
+async function loadPlanning() {
+  try {
+    S.plages = (await api("/api/plages")).plages;
+    S.overview = await api("/api/schedule/overview").catch(() => ({ upcoming: [], recent: [] }));
+    if (S.snap) S.official = await api(`/api/stoves/${sid()}/official-schedule`).catch(() => null);
+    S.planningError = null;
+  } catch (e) { S.planningError = e.message; }
+  render();
+}
+async function loadJournal() {
+  try { S.journal = (await api(`/api/journal?days=${S.jdays}`)).events; S.journalError = null; } catch (e) { S.journalError = e.message; }
+  render();
+}
+async function loadCharts() {
+  if (!S.snap) return;
+  try {
+    let hist;
+    [hist, S.insights, S.pellets] = await Promise.all([
+      api(`/api/stoves/${sid()}/history?hours=${S.hours}&outdoor=1`),
+      api(`/api/stoves/${sid()}/insights`),
+      api(`/api/stoves/${sid()}/pellets`)]);
+    S.history = hist.samples; S.outdoor = (hist.outdoor || []).map(([ts, t]) => ({ ts, t }));
+    S.chartsError = null;
+  } catch (e) { S.chartsError = e.message; }
+  try { S.proj = await api(`/api/stoves/${sid()}/projection?threshold=${threshold()}`); S.projError = null; } catch (e) { S.projError = e.message; }
+  render();
+}
+
+// ---------- Commandes (envoi, puis suivi par requêtes courtes) ----------
+async function send(kind, value, label) {
+  if (!S.snap || S.busy) return;
+  S.busy = true; render(); toast(`${label}… envoyé, en attente du poêle`, "info", true);
+  try {
+    const job = await api(`/api/stoves/${sid()}/commands`, { method: "POST", body: { kind, value, wait: false } });
+    let result = job.outcome ? { status: job.outcome, snapshot: job.snapshot, attempts: job.attempts } : null;
+    const end = Date.now() + 90000;
+    while (!result && Date.now() < end) {
+      await new Promise((r) => setTimeout(r, 1500));
+      try { const j = await api(`/api/commands/${job.id}`); if (j.status !== "pending") result = j; } catch {}
+    }
+    if (!result) throw new Error("pas de réponse du poêle après 90 s");
+    if (result.status === "error") throw new Error(result.error || "erreur du serveur");
+    if (result.snapshot) S.snap = result.snapshot;
+    result.status === "confirmed" ? toast(`${label} : confirmé par le poêle`, "ok")
+                                  : toast(`${label} : le poêle n'a pas confirmé`, "bad");
+  } catch (e) { toast(e.message, "bad"); }
+  S.busy = false; render();
+}
+let spTimer;
+function adjustSetpoint(delta) {
+  const base = S.pendingSetpoint ?? S.snap?.setpoint ?? 21;
+  S.pendingSetpoint = Math.min(40, Math.max(5, base + delta)); render();
+  clearTimeout(spTimer);
+  spTimer = setTimeout(async () => { const t = S.pendingSetpoint; await send("setpoint", t, `Consigne ${t.toFixed(1)} °C`); S.pendingSetpoint = null; render(); }, 900);
+}
+
+// ---------- Rendu ----------
+const tint = (t) => (t < 8 ? "var(--cold)" : t < 15 ? "var(--cool)" : "var(--mild)");
+const wxIcon = (c) => c === 0 ? "☀️" : [1, 2].includes(c) ? "🌤️" : c === 3 ? "☁️" : [45, 48].includes(c) ? "🌫️" : (c >= 51 && c <= 57) ? "🌦️"
+  : ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) ? "🌧️" : ((c >= 71 && c <= 77) || c === 85 || c === 86) ? "🌨️" : c >= 95 ? "⛈️" : "🌡️";
+
+function homeView() {
+  const s = S.snap, online = s?.connected;
+  const color = !s ? "var(--muted)" : s.in_error ? "var(--bad)" : !s.connected ? "var(--warn)" : s.phase === "on" ? "var(--ok)" : s.phase.startsWith("turning") ? "var(--warn)" : "var(--muted)";
+  const manual = s?.mode === "manual";
+  const mode = s?.mode === "dynamic" ? "auto" : s?.mode;
+  const days = (S.weather?.days || []).slice(0, 2);   // aujourd'hui puis demain
+  return `
+  <header class="top"><h1>Poêle</h1><button class="icon-btn" data-act="settings" aria-label="Réglages">⚙️</button></header>
+  <section class="status">
+    <div class="row"><span class="dot" style="background:${color}"></span><span class="phase">${esc(s ? (PHASES[s.phase] || (s.connected ? "État inconnu" : "Poêle injoignable")) : "Chargement…")}</span></div>
+    ${S.error ? `<span class="small warn">${esc(S.error)}</span>` : s && !online ? `<span class="small warn">Le serveur ne joint plus le poêle (module Wi-Fi endormi ?)</span>`
+      : S.lastRefresh ? `<span class="small muted">Mis à jour à ${S.lastRefresh.toLocaleTimeString("fr-FR")}</span>` : ""}
+  </section>
+  <section class="card">
+    <div class="small muted" style="text-align:center">Température ambiante</div>
+    <div class="temp-big num">${fmtT(s?.ambient)}</div>
+    <div class="setpoint">
+      <button class="step" data-act="sp" data-d="-0.5" aria-label="Baisser la consigne" ${!s || S.busy ? "disabled" : ""}>−</button>
+      <div class="value"><span class="small muted">Consigne</span><strong class="num" style="color:${S.pendingSetpoint != null ? "var(--accent)" : "inherit"}">${fmtT(S.pendingSetpoint ?? s?.setpoint)}</strong></div>
+      <button class="step" data-act="sp" data-d="0.5" aria-label="Augmenter la consigne" ${!s || S.busy ? "disabled" : ""}>+</button>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Dehors</h2>
+    ${S.weather?.error && !S.weather.days ? `<span class="small warn">${esc(S.weather.error)}</span>` : ""}
+    ${days.map((d) => `
+      <div class="row"><strong>${esc(d.label)}</strong>${d.min != null ? `<span class="small muted num">${Math.round(d.min)}° / ${Math.round(d.max)}°</span>` : ""}</div>
+      <div class="slots">${d.slots.map((x) => `<div class="slot" style="background:color-mix(in srgb, ${tint(x.temp)} 18%, transparent)">
+        <span class="h">${x.hour} h</span><span aria-hidden="true">${wxIcon(x.code)}</span><span class="t num">${Math.round(x.temp)}°</span></div>`).join("")}</div>
+      ${d.advice ? `<span class="advice ${d.advice.startsWith("Pas") ? "okc" : "warn"}">${esc(d.advice)}</span>` : ""}`).join("")}
+  </section>
+  ${S.overview.absence ? (() => { const x = absenceText(S.overview.absence); return `<section class="card notice" style="--c:var(--cool)"><strong>${x.title}</strong><span>${x.line}</span></section>`; })() : ""}
+  ${guardSession() ? `<section class="card notice" style="--c:var(--cold)"><strong>🛡️ Rallumé par la garde ${esc(when(guardSession().lit_ts))}</strong><span class="small muted">${esc(cap(guardSession().reason || ""))}. ${guardAfter(S.overview.guard)}</span></section>` : ""}
+  <button class="big ${s?.running ? "" : "primary"}" data-act="power" ${!s || S.busy || !online ? "disabled" : ""}>⏻ ${s?.running ? "Éteindre" : "Allumer"}</button>
+  ${S.timers.map((t) => `<div class="card" style="flex-direction:row;align-items:center"><span class="grow" style="flex:1">${t.action === "off" ? "Extinction" : "Allumage"} prévu ${esc(when(t.at_ts))}</span><button class="link" data-act="cancel-timer" data-id="${t.id}">Annuler</button></div>`).join("")}
+  <button data-act="timer" ${!s ? "disabled" : ""}>🕒 Éteindre ou allumer à une heure précise</button>
+  <section class="card">
+    <h2>Mode</h2>
+    <div class="seg modes" role="group" aria-label="Mode">${Object.entries(MODES).map(([k, v]) => `<button data-act="mode" data-v="${k}" aria-pressed="${mode === k}" ${!s || S.busy || !online ? "disabled" : ""}><span class="mi" aria-hidden="true">${MODE_ICONS[k]}</span>${v}</button>`).join("")}</div>
+    <div class="row spread"><h2>Puissance</h2><span class="small muted">${manual ? "réglable" : `automatique (actuelle : ${s?.power_level ?? "—"})`}</span></div>
+    <div class="seg" role="group" aria-label="Puissance">${[1, 2, 3, 4, 5].map((n) => `<button data-act="level" data-v="${n}" aria-pressed="${s?.manual_power === n}" ${!manual || S.busy || !online ? "disabled" : ""}>${n}</button>`).join("")}</div>
+  </section>
+  <section class="card">
+    <div class="kv"><span>Fumées</span><span class="num">${s?.fume_temp != null ? Math.round(s.fume_temp) + " °C" : "—"}</span></div>
+    <div class="kv"><span>Puissance actuelle</span><span class="num">${s?.power_level ?? "—"}</span></div>
+    <div class="kv"><span>Avant entretien</span><span class="num">${s?.hours_to_service != null ? s.hours_to_service + " h" : "—"}</span></div>
+  </section>`;
+}
+
+function segmentsFor(day, plages) {
+  const out = [], y = (day + 6) % 7;
+  for (const p of plages) {
+    const a = toMin(p.start), b = toMin(p.end), cross = b <= a;
+    if (p.days.includes(day)) out.push([a, cross ? 1440 : b, p.enabled]);
+    if (p.days.includes(y) && cross && b > 0) out.push([0, b, p.enabled]);
+  }
+  return out;
+}
+function officialFor(day) {
+  const out = [];
+  for (const o of S.official?.slots || []) {
+    const a = toMin(o.start), b = toMin(o.end);
+    if (o.day === day) out.push([a, b <= a ? 1440 : b]);
+    if (o.day === (day + 6) % 7 && b <= a && b > 0) out.push([0, b]);
+  }
+  return out;
+}
+const barHTML = (segs, now) => `<div class="bar">${segs.map(([a, b, on]) => `<i class="${on === false ? "off" : ""}" style="left:${a / 14.4}%;width:${Math.max(0.6, (b - a) / 14.4)}%"></i>`).join("")}${now != null ? `<b style="left:${now / 14.4}%"></b>` : ""}</div>`;
+
+function absenceText(a) {
+  if (a.kind === "pause") return { title: "⏸ Pause", line: `Aucun allumage jusqu'au <strong>${esc(fmtDay(new Date((a.end_ts - 1) * 1000)))}</strong> inclus.`,
+                                   note: "Les extinctions prévues continuent. Les plages reprennent ensuite toutes seules." };
+  const preheat = a.preheat_minutes ? a.end_ts - a.preheat_minutes * 60 : null;
+  return { title: "🧳 Vacances", line: `Retour le <strong>${esc(fmtDT(a.end_ts))}</strong>.`,
+           note: `${a.off_at_start ? `Extinction au départ (${esc(fmtDT(a.start_ts))}), puis aucun` : "Aucun"} allumage des plages`
+                 + (preheat ? `. Préchauffage le ${esc(fmtDT(preheat))} pour ${a.setpoint.toFixed(1).replace(".", ",")} °C à ton arrivée.` : ", pas de préchauffage.") };
+}
+function absenceCard() {
+  const a = S.overview.absence;
+  if (!a) return `<div class="row"><button style="flex:1" data-act="pause">⏸ Pause…</button><button style="flex:1" data-act="vacation">🧳 Vacances…</button></div>`;
+  const x = absenceText(a);
+  return `<section class="card notice" style="--c:var(--cool)"><div class="row spread"><h2>${x.title}</h2><button class="link" data-act="absence-cancel">Annuler</button></div>
+    <span>${x.line}</span><span class="small muted">${x.note}</span></section>`;
+}
+// Demain doux aux heures des plages (≥ 15 °C au créneau météo le plus proche) : on propose de sauter les allumages.
+function skipSuggestion() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const iso = isoLocal(d), wd = (d.getDay() + 6) % 7;
+  if (S.overview.absence || (S.overview.skips || []).includes(iso)) return "";
+  const own = S.plages.filter((p) => p.enabled && p.days.includes(wd)), wx = (S.weather?.days || []).find((w) => w.date === iso);
+  if (!own.length || !wx) return "";
+  const slotFor = (p) => { const m = toMin(p.start); return wx.slots.find((s) => s.hour === (m < 600 ? 7 : m < 900 ? 12 : 18)); };
+  const temps = own.map(slotFor);
+  if (temps.some((s) => !s || s.temp < 15)) return "";
+  const s = temps[0];
+  return `<section class="card notice" style="--c:var(--mild)"><span>Demain, il fera <strong>${Math.round(s.temp)} °C à ${s.hour} h</strong> : le chauffage n'est sans doute pas utile.</span>
+    <div class="row"><button class="primary" data-act="skip" data-date="${iso}">Pas d'allumage demain</button></div></section>`;
+}
+function absenceCovers(iso) {
+  const a = S.overview.absence; if (!a) return null;
+  const [y, m, d] = iso.split("-").map(Number), from = new Date(y, m - 1, d).getTime() / 1000;
+  return from < a.end_ts && from + 86400 > a.start_ts ? a.kind : null;
+}
+
+// Garde de température : rallumage automatique quand la Prévision 12 h annonce la pièce sous le seuil.
+const guardSession = () => S.overview.guard?.sessions?.[S.snap?.stove_id] || null;
+const guardAfter = (g) => !g ? "" : g.after === "window" ? `Il reste allumé jusqu'à ${g.end}, sauf si le planning prend le relais.`
+  : `Il s'éteint une fois la consigne atteinte (1 h de chauffe au moins), au plus tard à ${g.end}.`;
+function guardCard() {
+  const g = S.overview.guard; if (!g) return "";
+  const head = `<div class="row spread"><h2>🛡️ Garde de température</h2><button class="link" data-act="guard">${g.enabled ? "Régler" : "Activer…"}</button></div>`;
+  if (!g.enabled) return `<section class="card">${head}<span class="muted">Désactivée. Elle rallume toute seule le poêle quand la pièce va passer sous un seuil, aux heures que tu choisis.</span></section>`;
+  const live = guardSession();
+  return `<section class="card notice" style="--c:var(--cold)">${head}
+    <span>Rallume le poêle si la pièce va passer sous <strong>${fr(g.threshold)} °C</strong>, de <strong class="num">${g.start}</strong> à <strong class="num">${g.end}</strong>.</span>
+    <span class="small muted">${guardAfter(g)} Rien en pause, en vacances, un jour sauté ni poêle en alarme ; un allumage prévu à temps a la priorité.</span>
+    ${live ? `<span class="small okc">En cours : rallumé ${esc(when(live.lit_ts))} (${esc(live.reason || "")}).</span>` : ""}</section>`;
+}
+function guardDialog() {
+  const g = S.overview.guard || {};
+  const st = { enabled: g.enabled ?? true, threshold: g.threshold ?? 18, start: g.start || "07:00", end: g.end || "22:00", after: g.after || "setpoint" };
+  if (!g.enabled) st.enabled = true;          // « Activer… » : on ouvre prêt à activer
+  const draw = () => openDialog(`<header><button data-x>Annuler</button><h2>Garde</h2><button class="primary" data-save ${st.start === st.end ? "disabled" : ""}>Enregistrer</button></header>
+    <div class="card"><label class="row spread"><span><strong>Garde active</strong></span><input type="checkbox" id="gon" ${st.enabled ? "checked" : ""}></label>
+      <span class="small muted">Chaque minute, le serveur refait la Prévision 12 h. Si la pièce va passer sous le seuil et qu'aucun allumage prévu n'arrive à temps, il rallume le poêle juste assez tôt (démarrage compris).</span></div>
+    <div class="card"><div class="row spread"><span>Ne pas descendre sous</span><span class="row"><button data-thr="-0.5" aria-label="Moins">−</button><strong class="num" style="font-size:22px">${fr(st.threshold)} °C</strong><button data-thr="0.5" aria-label="Plus">+</button></span></div></div>
+    <div class="card"><span class="small muted">Heures de garde</span>
+      <div class="times"><div><span class="small muted">De</span><input type="time" step="60" id="gs" value="${st.start}"></div><div><span class="small muted">À</span><input type="time" step="60" id="ge" value="${st.end}"></div></div>
+      <span class="small muted">En dehors (la nuit, par exemple), la garde ne rallume jamais. Elle ne rallume pas non plus à moins d'1 h de la fin.</span></div>
+    <div class="card"><span class="small muted">Une fois rallumé</span>
+      <div class="seg"><button data-after="setpoint" aria-pressed="${st.after === "setpoint"}">Éteindre à la consigne</button><button data-after="window" aria-pressed="${st.after === "window"}">Laisser jusqu'à ${st.end}</button></div>
+      <span class="small muted">${st.after === "setpoint" ? "Le poêle s'éteint dès que la pièce est à la consigne, après 1 h de chauffe au moins : moins de pellets, mais il peut se rallumer plus tard dans la journée." : `Le poêle reste allumé jusqu'à ${st.end} : la pièce reste à la consigne, plus de pellets.`}
+        Une plage qui commence reprend la main.</span></div>
+    <span class="small err" id="gerr"></span>`, (el) => {
+    el.querySelector("[data-x]").onclick = closeDialog;
+    el.querySelector("#gon").onchange = (e) => { st.enabled = e.target.checked; };
+    el.querySelectorAll("[data-thr]").forEach((b) => (b.onclick = () => { st.threshold = Math.min(25, Math.max(10, st.threshold + Number(b.dataset.thr))); draw(); }));
+    onTime(el.querySelector("#gs"), (v) => (st.start = v), draw);
+    onTime(el.querySelector("#ge"), (v) => (st.end = v), draw);
+    el.querySelectorAll("[data-after]").forEach((b) => (b.onclick = () => { st.after = b.dataset.after; draw(); }));
+    el.querySelector("[data-save]").onclick = async () => {
+      try { S.overview.guard = await api("/api/settings/guard", { method: "PUT", body: st }); closeDialog();
+            toast(st.enabled ? "Garde activée" : "Garde désactivée", "ok"); render(); loadPlanning(); }
+      catch (e) { el.querySelector("#gerr").textContent = e.message; }
+    };
+  });
+  draw();
+}
+
+function planningView() {
+  const t = todayIdx(), nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const order = [0, 1, 2, 3, 4, 5, 6].map((i) => (t + i) % 7);
+  const hasOfficial = (S.official?.slots || []).length > 0;
+  return `
+  <header class="top"><h1>Planning</h1></header>
+  ${absenceCard()}
+  ${skipSuggestion()}
+  ${S.snap?.chrono_enabled ? `<section class="card"><strong class="warn">⚠️ Le programme interne du poêle est actif</strong><span class="small muted">Il continue de s'appliquer en plus de ces plages et peut allumer ou éteindre à d'autres heures. Pour que seules ces plages comptent, désactive-le dans Maestro+.</span></section>` : ""}
+  <section class="card"><h2>Prochaines actions</h2>
+    ${S.overview.upcoming.length ? S.overview.upcoming.slice(0, 4).map((e) => `<div class="list-item"><span>${e.kind === "on" ? "🔥" : e.kind === "skip" ? "↷" : "⏻"}</span><span class="grow">${esc(e.label)}</span><span class="small muted num">${esc(when(e.ts))}</span></div>`).join("") : `<span class="muted">Rien de prévu.</span>`}
+    ${S.overview.recent[0] ? `<span class="small muted">Dernière action exécutée : ${esc(S.overview.recent[0].label)} — ${esc(when(S.overview.recent[0].ts))}</span>` : ""}
+  </section>
+  <section class="card"><h2>Ponctuel</h2>
+    ${S.timers.map((x) => `<div class="list-item"><span class="grow">${x.action === "off" ? "Extinction" : "Allumage"} à ${new Date(x.at_ts * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span><button class="link" data-act="cancel-timer" data-id="${x.id}">Annuler</button></div>`).join("")}
+    <button class="link" data-act="timer">🕒 Une fois, à une heure précise</button>
+  </section>
+  ${guardCard()}
+  <section class="card"><h2>Semaine</h2>
+    ${order.map((d, i) => {
+      const date = new Date(); date.setDate(date.getDate() + i);
+      const own = S.plages.filter((p) => p.days.includes(d)).sort((a, b) => toMin(a.start) - toMin(b.start));
+      const iso = isoLocal(date), wx = (S.weather?.days || []).find((w) => w.date === iso);
+      const skipped = (S.overview.skips || []).includes(iso), away = absenceCovers(iso);
+      return `<button class="day ${skipped || away ? "skipped" : ""}" data-act="day" data-d="${d}" data-date="${iso}">
+        <div class="row spread"><span><strong>${DAYS[d]}</strong> <span class="muted small">${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</span> ${i === 0 ? `<span class="chip">aujourd'hui</span>` : ""}
+          ${skipped ? `<span class="tag" style="--c:var(--muted)">↷ allumage sauté</span>` : away ? `<span class="tag" style="--c:var(--cool)">${away === "pause" ? "pause" : "vacances"}</span>` : ""}</span>
+          <span class="small muted num">${own.length ? own.map((p) => `${p.anticipate ? "chaud " : ""}${p.start}–${p.end}`).join("  ") : "Éteint"} ›</span></div>
+        ${barHTML(segmentsFor(d, S.plages), i === 0 ? nowMin : null)}
+        ${hasOfficial ? `<div class="bar thin">${officialFor(d).map(([a, b]) => `<i style="left:${a / 14.4}%;width:${Math.max(0.6, (b - a) / 14.4)}%"></i>`).join("")}</div>` : ""}
+        ${wx ? `<div class="mini">${wx.slots.map((x) => `<span class="num" style="color:${tint(x.temp)}">${wxIcon(x.code)} ${x.hour} h ${Math.round(x.temp)}°</span>`).join("")}</div>` : ""}
+      </button>`;
+    }).join("")}
+    <span class="small muted">Touche un jour pour régler ses heures, à la minute près. Le poêle n'est jamais rallumé s'il est en alarme.</span>
+    ${hasOfficial ? `<span class="small muted"><span style="color:var(--accent)">▬</span> nos plages · <span style="color:var(--maestro)">▬</span> programme Maestro${S.official.enabled === true ? " (actif)" : S.official.enabled === false ? " (désactivé)" : ""}</span>` : ""}
+    ${S.planningError ? `<span class="small err">${esc(S.planningError)}</span>` : ""}
+  </section>`;
+}
+
+function chartsView() {
+  const p = S.pellets;
+  return `
+  <header class="top"><h1>Courbes</h1></header>
+  <section class="card"><h2>Pellets (estimation)</h2>
+    ${p?.known ? `<div class="row spread"><span><strong style="font-size:30px" class="num">${p.remaining_kg.toFixed(1)} kg</strong> <span class="muted">sur ${Math.round(p.capacity_kg)} kg</span></span>${p.hours_left != null ? `<strong class="num">≈ ${p.hours_left.toFixed(1)} h</strong>` : ""}</div>
+      <div class="progress"><i style="width:${Math.min(100, (p.remaining_kg / p.capacity_kg) * 100)}%"></i></div>` : `<span class="muted">Indique un remplissage pour démarrer l'estimation.</span>`}
+    <div class="row wrap"><button class="primary" data-act="refill" data-kg="15">Sac de 15 kg ajouté</button><button data-act="refill" data-full="1">Réservoir plein</button></div>
+    ${S.canUndo ? `<button class="link" data-act="undo-refill">↩︎ Annuler le dernier remplissage</button>` : ""}
+  </section>
+  <section class="card"><div class="row spread"><h2>Température</h2>
+    <div class="seg" style="width:180px">${[[24, "24 h"], [72, "3 j"], [168, "7 j"]].map(([h, l]) => `<button data-act="hours" data-v="${h}" aria-pressed="${S.hours === h}">${l}</button>`).join("")}</div></div>
+    ${tempChart()}
+  </section>
+  ${forecastCard()}
+  ${costCard()}
+  <section class="card"><div class="row spread"><h2>Chauffe et météo</h2>
+    <div class="seg" style="width:120px">${[[7, "7 j"], [30, "30 j"]].map(([d, l]) => `<button data-act="span" data-v="${d}" aria-pressed="${S.span === d}">${l}</button>`).join("")}</div></div>
+    ${heatChart()}
+  </section>
+  ${comfortCard()}
+  ${coolingCard()}
+  ${fumesCard()}
+  ${S.insights?.weather_error ? `<span class="small warn">Météo passée indisponible : ${esc(S.insights.weather_error)}</span>` : ""}
+  ${S.chartsError ? `<span class="small err">${esc(S.chartsError)}</span>` : ""}`;
+}
+
+function tempChart() {
+  const pts = S.history.filter((s) => s.ambient > 0);
+  if (pts.length < 2) return `<span class="muted">Pas encore de relevés sur cette période.</span>`;
+  const W = 340, H = 180, L = 28, B = 20, x0 = pts[0].ts, x1 = pts[pts.length - 1].ts;
+  // Dehors : relevés horaires Open-Meteo sur la même période, interpolés pour l'info-bulle.
+  const out = S.outdoor.filter((o) => o.ts >= x0 - 3600 && o.ts <= x1 + 3600);
+  const outAt = (t) => {
+    const i = out.findIndex((o) => o.ts >= t);
+    if (i < 0) return out.length && t - out[out.length - 1].ts <= 3600 ? out[out.length - 1].t : null;
+    if (i === 0) return out[0].ts - t <= 3600 ? out[0].t : null;
+    const a = out[i - 1], b = out[i];
+    return a.t + (b.t - a.t) * (t - a.ts) / Math.max(1, b.ts - a.ts);
+  };
+  const outPts = [x0, ...out.filter((o) => o.ts > x0 && o.ts < x1).map((o) => o.ts), x1].map((ts) => ({ ts, t: outAt(ts) })).filter((o) => o.t != null);
+  const vals = [...pts.flatMap((s) => [s.ambient, s.running && s.setpoint ? s.setpoint : s.ambient]), ...outPts.map((o) => o.t)];
+  const lo = Math.floor(Math.min(...vals) - 1), hi = Math.ceil(Math.max(...vals) + 1);
+  const X = (t) => L + ((t - x0) / Math.max(1, x1 - x0)) * (W - L - 4), Y = (v) => 6 + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - B - 6);
+  const amb = pts.map((s) => `${X(s.ts).toFixed(1)},${Y(s.ambient).toFixed(1)}`).join(" ");
+  const outLine = outPts.map((o) => `${X(o.ts).toFixed(1)},${Y(o.t).toFixed(1)}`).join(" ");
+  const sp = pts.filter((s) => s.running && s.setpoint).map((s) => `${X(s.ts).toFixed(1)},${Y(s.setpoint).toFixed(1)}`).join(" ");
+  const ticks = hi - lo > 12 ? [lo, Math.round(lo + (hi - lo) / 3), Math.round(lo + 2 * (hi - lo) / 3), hi] : [lo, Math.round((lo + hi) / 2), hi];
+  const xt = [0, 0.5, 1].map((f) => x0 + f * (x1 - x0));
+  const deg = (v) => `${v.toFixed(1).replace(".", ",")} °C`;
+  S.tips.tchart = { pts, X, W, top: 6, bottom: H - B, dots: (p) => [[Y(p.ambient), "var(--accent)"], ...(outAt(p.ts) != null ? [[Y(outAt(p.ts)), "var(--cold)"]] : [])], html: (p) => {
+    const state = p.phase === "turning-on" ? "Allumage" : p.phase === "turning-off" ? "Extinction" : p.phase === "cooling-down" ? "Refroidissement"
+      : p.running ? `Consigne ${deg(p.setpoint ?? 0)}${p.power_level ? ` · puissance ${p.power_level}` : ""}` : "Éteint";
+    // Fumées et phase lue : montrent si le poêle brûlait vraiment quand le serveur le croyait éteint (ou l'inverse).
+    const o = outAt(p.ts);
+    const extra = [o != null ? `dehors ${deg(o)}` : "", p.fume_temp != null ? `fumées ${Math.round(p.fume_temp)} °C` : "", PHASES[p.phase] ? "" : `phase « ${p.phase} »`].filter(Boolean).join(" · ");
+    return `${esc(new Date(p.ts * 1000).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}<br><strong>${deg(p.ambient)}</strong><br>${esc(state)}${extra ? `<br><span class="small">${esc(extra)}</span>` : ""}`;
+  } };
+  return `<div class="chartwrap" id="tchart"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Température ambiante et consigne">
+    ${ticks.map((v) => `<line class="grid" x1="${L}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/><text x="0" y="${Y(v) + 3}">${v}°</text>`).join("")}
+    ${xt.map((t, i) => `<text x="${Math.min(W - 30, Math.max(L, X(t) - 14))}" y="${H - 4}">${new Date(t * 1000).toLocaleString("fr-FR", S.hours > 24 ? { weekday: "short", hour: "2-digit" } : { hour: "2-digit", minute: "2-digit" })}</text>`).join("")}
+    ${sp ? `<polyline points="${sp}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>` : ""}
+    ${outLine ? `<polyline points="${outLine}" fill="none" stroke="var(--cold)" stroke-width="1.6" stroke-linejoin="round"/>` : ""}
+    <polyline points="${amb}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
+    ${tipCursor()}
+  </svg><div class="tip" hidden></div></div><span class="small muted"><span style="color:var(--accent)">━</span> ambiante · <span>╌</span> consigne${outLine ? ` · <span style="color:var(--cold)">━</span> dehors` : ""}</span>`;
+}
+// Info-bulles des courbes (Température, Prévision 12 h) : point le plus proche du pointeur (souris, ou doigt sur téléphone).
+// Chaque courbe déclare S.tips[id] = { pts (triés par ts), X, W, top, bottom, dots(p) → [[y, couleur]…], html(p) }.
+// Recalculée après chaque rafraîchissement.
+const tipCursor = () => `<g class="tcur" visibility="hidden"><line stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 3"/>${
+  [0, 1].map(() => `<circle r="4.5" stroke="var(--card)" stroke-width="2" visibility="hidden"/>`).join("")}</g>`;
+function showTip(id, cx, cy) {
+  const wrap = document.getElementById(id), m = S.tips[id];
+  if (!wrap || !m || !m.pts.length) return;
+  if (S.hover && S.hover.id !== id) hideTip();
+  S.hover = { id, cx, cy };
+  const r = wrap.querySelector("svg").getBoundingClientRect(), vx = ((cx - r.left) / r.width) * m.W;
+  let a = 0, b = m.pts.length - 1;
+  while (b - a > 1) { const mid = (a + b) >> 1; if (m.X(m.pts[mid].ts) < vx) a = mid; else b = mid; }
+  const p = Math.abs(m.X(m.pts[a].ts) - vx) <= Math.abs(m.X(m.pts[b].ts) - vx) ? m.pts[a] : m.pts[b];
+  const px = m.X(p.ts), cur = wrap.querySelector(".tcur"), line = cur.querySelector("line");
+  line.setAttribute("x1", px); line.setAttribute("x2", px); line.setAttribute("y1", m.top); line.setAttribute("y2", m.bottom);
+  const dots = m.dots(p);
+  cur.querySelectorAll("circle").forEach((c, i) => {
+    const d = dots[i];
+    c.setAttribute("visibility", d ? "visible" : "hidden");
+    if (d) { c.setAttribute("cx", px); c.setAttribute("cy", d[0]); c.setAttribute("fill", d[1]); }
+  });
+  cur.setAttribute("visibility", "visible");
+  const tip = wrap.querySelector(".tip");
+  tip.innerHTML = m.html(p);
+  tip.hidden = false;
+  const w = wrap.getBoundingClientRect();
+  let x = cx - w.left + 14, y = cy - w.top - tip.offsetHeight - 12;
+  if (x + tip.offsetWidth > w.width) x = cx - w.left - tip.offsetWidth - 14;
+  if (y < 0) y = cy - w.top + 18;
+  tip.style.transform = `translate(${Math.max(0, x)}px, ${y}px)`;
+}
+function hideTip() {
+  const wrap = S.hover && document.getElementById(S.hover.id);
+  S.hover = null;
+  wrap?.querySelector(".tcur")?.setAttribute("visibility", "hidden");
+  const tip = wrap?.querySelector(".tip"); if (tip) tip.hidden = true;
+}
+// Prévision 12 h : 6 h mesurées, puis la pièce simulée avec le planning (orange) et sans rallumage (bleu), face au seuil de confort.
+function forecastCard() {
+  const p = S.proj, thr = threshold();
+  const seg = `<div class="seg" style="width:150px">${[18, 19, 20].map((t) => `<button data-act="threshold" data-v="${t}" aria-pressed="${thr === t}">${t}°</button>`).join("")}</div>`;
+  if (!p) return `<section class="card"><div class="row spread"><h2>Prévision 12 h</h2>${seg}</div><span class="muted">${esc(S.projError || "Calcul en cours…")}</span></section>`;
+  const now = p.plan[0].ts, x0 = now - 6 * 3600, x1 = p.end_ts, W = 340, H = 170, L = 28, B = 20;
+  const past = S.history.filter((h) => h.ts >= x0 && h.ambient > 0);
+  const differs = p.plan.some((q, i) => Math.abs(q.temp - p.free[i].temp) > 0.05);
+  const vals = [...past.map((h) => h.ambient), ...p.plan.map((q) => q.temp), ...(differs ? p.free.map((q) => q.temp) : []), thr, p.target];
+  const lo = Math.floor(Math.min(...vals) - 0.5), hi = Math.ceil(Math.max(...vals) + 0.5);
+  const X = (t) => L + ((t - x0) / (x1 - x0)) * (W - L - 6), Y = (v) => 8 + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - B - 8);
+  const poly = (arr, key) => arr.map((q) => `${X(q.ts).toFixed(1)},${Y(q[key]).toFixed(1)}`).join(" ");
+  const ticks = hi - lo <= 4 ? Array.from({ length: hi - lo + 1 }, (_, i) => lo + i) : [lo, Math.round((lo + hi) / 2), hi];
+  const marks = [];
+  if (p.next_on) marks.push([p.next_on.ts, "var(--ok)", "🔥"]);
+  if (p.relight_ts && !p.on_time) marks.push([p.relight_ts, "var(--warn)", "⏻"]);
+  // Info-bulle : heure exacte (pas de 5 min) et température prévue, avec et sans rallumage, face au seuil.
+  const deg = (v) => `${fr(v)} °C`, at = (t) => new Date(t * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const under = (v) => (v < thr ? ` <span class="warn">sous ${thr} °C</span>` : "");
+  S.tips.fchart = { X, W, top: 4, bottom: H - B,
+    pts: [...past.filter((h) => h.ts < now).map((h) => ({ ts: h.ts, measured: h.ambient })),
+          ...p.plan.map((q, i) => ({ ts: q.ts, plan: q.temp, lit: q.lit, free: p.free[i]?.temp }))],
+    dots: (q) => q.measured != null ? [[Y(q.measured), "var(--accent)"]]
+      : [[Y(q.plan), "var(--accent)"], ...(differs && q.free != null && Math.abs(q.free - q.plan) > 0.05 ? [[Y(q.free), "var(--cold)"]] : [])],
+    html: (q) => q.measured != null ? `${at(q.ts)} · mesurée<br><strong>${deg(q.measured)}</strong>${under(q.measured)}`
+      : `${at(q.ts)} · prévue<br><strong>${deg(q.plan)}</strong>${under(q.plan)}<br><span class="small">${q.lit ? "poêle allumé" : "poêle éteint"}</span>${
+        differs && q.free != null && Math.abs(q.free - q.plan) > 0.05 ? `<br><span class="small">sans rallumage : ${deg(q.free)}${q.free < thr ? ` (sous ${thr} °C)` : ""}</span>` : ""}` };
+  const chart = `<div class="chartwrap" id="fchart"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Température de la pièce prévue sur 12 heures">
+    ${ticks.map((v) => `<line class="grid" x1="${L}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/><text x="0" y="${Y(v) + 3}">${v}°</text>`).join("")}
+    <line x1="${L}" x2="${W}" y1="${Y(thr)}" y2="${Y(thr)}" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="${L}" x2="${W}" y1="${Y(p.target)}" y2="${Y(p.target)}" stroke="var(--ok)" stroke-width="1" stroke-dasharray="1 3"/>
+    <line x1="${X(now)}" x2="${X(now)}" y1="4" y2="${H - B}" stroke="var(--muted)" stroke-width="1"/>
+    ${marks.map(([t, c, icon]) => `<line x1="${X(t)}" x2="${X(t)}" y1="12" y2="${H - B}" stroke="${c}" stroke-width="1" stroke-dasharray="2 3"/><text x="${X(t)}" y="10" text-anchor="middle" style="font-size:11px">${icon}</text>`).join("")}
+    ${past.length > 1 ? `<polyline points="${poly(past, "ambient")}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>` : ""}
+    ${differs ? `<polyline points="${poly(p.free, "temp")}" fill="none" stroke="var(--cold)" stroke-width="2" stroke-dasharray="5 4"/>` : ""}
+    <polyline points="${poly(p.plan, "temp")}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/>
+    ${p.reach_ts ? `<circle cx="${X(p.reach_ts)}" cy="${Y(p.target)}" r="4.5" fill="var(--ok)" stroke="var(--card)" stroke-width="2"/>` : ""}
+    ${[[x0, "−6 h"], [now, "maint."], [now + 6 * 3600, hhmm(now + 6 * 3600)], [x1, hhmm(x1)]].map(([t, l], i) =>
+      `<text x="${X(t)}" y="${H - 4}" text-anchor="${i === 0 ? "start" : i === 3 ? "end" : "middle"}">${l}</text>`).join("")}
+    ${tipCursor()}
+  </svg><div class="tip" hidden></div></div>
+  <span class="small muted"><span style="color:var(--accent)">━</span> mesurée · <span style="color:var(--accent)">╌</span> prévue avec le planning${differs ? ` · <span style="color:var(--cold)">╌</span> sans rallumage` : ""} · <span style="color:var(--warn)">┄</span> seuil ${thr} °C · <span style="color:var(--ok)">●</span> consigne ${fr(p.target)} °C atteinte</span>`;
+  const lines = [];
+  const allLit = p.plan.every((q) => q.lit);
+  if (allLit) lines.push(`Le poêle reste allumé sur les 12 h : la pièce reste vers <strong>${fr(p.plan[p.plan.length - 1].temp)} °C</strong>.`);
+  else if (!p.cross_ts) lines.push(`Sans rallumage, la pièce reste au-dessus de ${thr} °C jusqu'à ${esc(when(p.end_ts))} au moins (au plus bas ${fr(p.min_free)} °C).`);
+  else lines.push(`Sans rallumage, la pièce passera sous <strong>${thr} °C ${esc(when(p.cross_ts))}</strong>.`);
+  const n = p.next_on;
+  let action = "";
+  if (!allLit && n && p.on_time) {
+    lines.push(`<span class="okc">✓</span> Ton allumage prévu ${esc(when(n.ts))} arrive à temps : la pièce sera à <strong>${fr(n.temp_then)} °C</strong> à ce moment-là.`);
+  } else if (!allLit && p.cross_ts) {
+    const at = Math.floor(p.relight_ts / 300) * 300, soon = at - Date.now() / 1000 < 600;
+    lines.push(`Pour rester au-dessus de ${thr} °C, rallumer <strong>${soon ? "maintenant" : esc(when(at))}</strong>${p.relight_reach_ts ? ` (${fr(p.target)} °C ${esc(when(p.relight_reach_ts))})` : ""}${n ? `. Ton allumage prévu ${esc(when(n.ts))} arrive trop tard : la pièce descendrait jusqu'à ${fr(p.min_plan)} °C` : ""}.`);
+    action = soon ? `<button class="primary" data-act="power" ${S.snap?.running ? "disabled" : ""}>⏻ Allumer maintenant</button>`
+                  : `<button class="primary" data-act="relight" data-ts="${at}">🕒 Programmer l'allumage ${esc(when(at))}</button>`;
+  } else if (!allLit && n) {
+    lines.push(`Prochain allumage prévu ${esc(when(n.ts))} : la pièce sera à ${fr(n.temp_then)} °C.`);
+  }
+  // Consigne : quand la pièce y arrive (ligne mise en avant, c'est la question qu'on se pose en premier).
+  const goal = fr(p.target);
+  const reach = p.reached_now ? `<span class="okc">✓</span> La pièce est à la consigne de <strong>${goal} °C</strong>${S.snap?.running ? " : le poêle la tient" : ""}.`
+    : p.reach_ts ? `🌡️ <strong>${goal} °C ${esc(when(p.reach_ts))}</strong>${allLit || S.snap?.running ? " (poêle allumé)" : n ? `, avec l'allumage prévu ${esc(when(n.ts))}` : ""}.`
+    : `🌡️ ${goal} °C pas atteints d'ici ${esc(when(p.end_ts))}${!S.snap?.running && !n ? " : aucun allumage prévu dans les 12 h" : S.snap?.running ? " : extinction prévue avant" : ""}.`;
+  return `<section class="card"><div class="row spread"><h2>Prévision 12 h</h2>${seg}</div>
+    <span class="reach">${reach}</span>
+    ${chart}
+    ${lines.map((l) => `<span>${l}</span>`).join("")}
+    ${action}
+    ${S.overview.guard?.enabled ? `<span class="small" style="color:var(--cold)">🛡️ Garde active : le poêle se rallume tout seul pour ne pas passer sous ${fr(S.overview.guard.threshold)} °C, de ${S.overview.guard.start} à ${S.overview.guard.end}.</span>` : ""}
+    <span class="small muted">${p.learned ? `Perte de chaleur apprise sur les nuits mesurées` : `Perte de chaleur estimée par défaut tant qu'aucune nuit n'est mesurée : prévision approximative`}, température dehors prévue${p.outdoor_now != null ? ` (${fr(p.outdoor_now, 0)} °C maintenant)` : ""}, démarrage du poêle ≈ ${p.startup_min} min. Seuil réglable ci-dessus.</span>
+    ${p.weather_error ? `<span class="small warn">Météo indisponible : ${esc(p.weather_error)} (8 °C dehors supposés).</span>` : ""}
+  </section>`;
+}
+
+// Coût : kg estimés d'après la puissance (fiche MCZ) × prix du sac saisi une fois.
+function costCard() {
+  const x = S.insights; if (!x) return "";
+  const p = x.price, c = x.cost;
+  const since = x.season_since ? new Date(x.season_since * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : null;
+  const tile = (label, money, kg) => `<div class="tile"><span class="small muted">${label}</span>
+    <strong class="num">${p ? eur(money) : `${fr(kg, 0)} kg`}</strong>${p ? `<span class="small muted num">${fr(kg, 0)} kg</span>` : ""}</div>`;
+  return `<section class="card"><div class="row spread"><h2>Coût (estimation)</h2>${p ? `<button class="link" data-act="price">Modifier le prix</button>` : ""}</div>
+    <div class="tiles">${tile("7 derniers jours", c.week, x.kg.week)}${tile(cap(new Date().toLocaleDateString("fr-FR", { month: "long" })), c.month, x.kg.month)}${tile("Saison", c.season, x.kg.season)}</div>
+    ${p ? `<span class="small muted">${c.month_pace != null ? `Au rythme des 7 derniers jours : ≈ <strong>${eur(c.month_pace)}</strong> par mois. ` : ""}${fr(p.bag_eur, 2)} € le sac de ${fr(p.bag_kg, 0)} kg${since ? ` · saison comptée depuis le ${since}` : ""}.</span>`
+        : `<button class="primary" data-act="price">Indiquer le prix des pellets</button>`}
+  </section>`;
+}
+
+// Barres : heures de chauffe par jour ; points : température moyenne dehors ce jour-là (échelle de droite).
+function heatChart() {
+  const x = S.insights, all = x?.days || [];
+  if (!all.length) return `<span class="muted">Pas encore de statistiques.</span>`;
+  const days = all.slice(-S.span), W = 340, H = 170, L = 4, R = 28, B = 20, T = 14, bw = (W - L - R) / days.length;
+  const max = Math.max(4, ...days.map((d) => d.run_hours)), outs = days.map((d) => d.outdoor).filter((v) => v != null);
+  const lo = outs.length ? Math.floor(Math.min(...outs) - 1) : 0, hi = outs.length ? Math.ceil(Math.max(...outs) + 1) : 20;
+  const Y = (h) => H - B - (h / max) * (H - B - T), OY = (t) => T + (1 - (t - lo) / Math.max(1, hi - lo)) * (H - B - T);
+  const cx = (i) => L + i * bw + bw / 2, short = days.length <= 10;
+  const line = days.map((d, i) => (d.outdoor == null ? null : `${cx(i).toFixed(1)},${OY(d.outdoor).toFixed(1)}`)).filter(Boolean).join(" ");
+  const kg = days.reduce((a, d) => a + d.pellets_kg_est, 0), money = days.every((d) => d.cost == null) ? null : days.reduce((a, d) => a + (d.cost || 0), 0);
+  const w = x.weather;
+  const compare = w?.change_pct != null
+    ? `À météo comparable, <strong>${w.change_pct <= 0 ? "−" : "+"}${Math.abs(w.change_pct)} %</strong> de pellets par rapport à la semaine d'avant (${fr(w.kg_per_dju, 2)} kg par degré-jour, contre ${fr(w.prev_kg_per_dju, 2)}).`
+    : w?.kg_per_dju != null ? `${fr(w.kg_per_dju, 2)} kg de pellets par degré-jour sur la semaine. La comparaison avec la semaine d'avant arrive après deux semaines de relevés.`
+    : `La comparaison à météo égale arrive après quelques jours complets de relevés.`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Heures de chauffe par jour et température extérieure">
+    ${outs.length ? [lo, hi].map((t) => `<text x="${W - 2}" y="${OY(t) + 3}" text-anchor="end" style="fill:var(--cold)">${t}°</text>`).join("") : ""}
+    ${days.map((d, i) => { const bx = L + i * bw + bw * 0.18, y = Y(d.run_hours), label = short || (days.length - 1 - i) % 5 === 0;
+      const day = new Date(d.date + "T12:00:00").toLocaleDateString("fr-FR", short ? { weekday: "short" } : { day: "numeric", month: "numeric" });
+      return `<rect x="${bx}" y="${y}" width="${bw * 0.64}" height="${Math.max(0, H - B - y)}" rx="${short ? 4 : 2}" fill="var(--accent)" opacity="${d.coverage < 0.8 ? 0.4 : 0.85}"/>
+        ${short && d.run_hours > 0 ? `<text x="${cx(i)}" y="${y - 3}" text-anchor="middle">${fr(d.run_hours)}</text>` : ""}
+        ${label ? `<text x="${cx(i)}" y="${H - 5}" text-anchor="middle">${day}</text>` : ""}`; }).join("")}
+    ${line ? `<polyline points="${line}" fill="none" stroke="var(--cold)" stroke-width="1.5" opacity=".7"/>` : ""}
+    ${days.map((d, i) => (d.outdoor == null ? "" : `<circle cx="${cx(i)}" cy="${OY(d.outdoor)}" r="3" fill="var(--cold)"/>`)).join("")}
+  </svg>
+  <span class="small muted"><span style="color:var(--accent)">▮</span> heures de chauffe · <span style="color:var(--cold)">●</span> température moyenne dehors · barres pâles : journée incomplète</span>
+  <span class="small">Sur ${days.length} jours : <strong class="num">${fr(kg, 0)} kg</strong> de pellets${money != null ? ` ≈ <strong class="num">${eur(money)}</strong>` : ""}.</span>
+  <span class="small">${compare}</span>
+  <span class="small muted">Degré-jour : 1 °C sous 18 °C dehors pendant une journée. Plus il fait froid, plus il y en a : en divisant les pellets par les degrés-jours, on compare des semaines de météo différente.</span>`;
+}
+
+function comfortCard() {
+  const c = S.insights?.comfort;
+  const body = !c ? `<span class="muted">Pas encore d'allumage mesuré.</span>` : `
+    ${c.median_minutes != null ? `<span>Temps pour atteindre la consigne : <strong class="num">${hm(c.median_minutes)}</strong> <span class="small muted">(médiane de ${c.reached} allumage${c.reached > 1 ? "s" : ""}, 30 j)</span></span>` : ""}
+    ${c.held_pct != null ? `<span>Une fois atteinte, consigne tenue à 0,5 °C près <strong class="num">${c.held_pct} %</strong> du temps de chauffe.</span>` : ""}
+    ${c.recent.length ? `<div>${c.recent.map((w) => `<div class="list-item"><span class="grow small">${esc(fmtDT(w.ts))}</span>
+      <span class="small num">${fr(w.from)} → ${fr(w.setpoint)} °C</span>
+      <span class="small num ${w.minutes != null ? "" : "warn"}" style="min-width:92px;text-align:right">${w.minutes != null ? `en ${hm(w.minutes)}` : `max ${fr(w.best)} °C`}</span></div>`).join("")}</div>
+      <span class="small muted">« max » : consigne pas atteinte avant l'extinction.</span>` : ""}`;
+  return `<section class="card"><h2>Confort</h2>${body}</section>`;
+}
+
+function coolingCard() {
+  const k = S.insights?.cooling;
+  if (!k) return `<section class="card"><h2>Maison sans chauffage</h2><span class="muted">Pas encore de nuit mesurée : il faut le poêle éteint au moins 3 h entre 22 h et 7 h.</span></section>`;
+  const l = k.last;
+  return `<section class="card"><h2>Maison sans chauffage</h2>
+    <span>La nuit, poêle éteint, la pièce perd <strong class="num">${fr(k.per_hour)} °C par heure</strong>${k.outdoor != null ? ` avec ${fr(k.outdoor, 0)} °C dehors` : ""} <span class="small muted">(médiane de ${k.nights} nuit${k.nights > 1 ? "s" : ""})</span>.</span>
+    <span class="small muted">Dernière nuit : ${fr(l.from)} → ${fr(l.to)} °C entre ${hhmm(l.start_ts)} et ${hhmm(l.end_ts)}${l.outdoor != null ? `, ${fr(l.outdoor, 0)} °C dehors` : ""}.</span>
+    ${k.table.length ? `<table class="simple num"><thead><tr><th>Dehors</th><th>Perte à 20 °C</th><th>De 21 à 18 °C</th></tr></thead><tbody>
+      ${k.table.map((r) => `<tr><td>${r.outdoor} °C</td><td>${fr(r.per_hour)} °C/h</td><td>${hm(Math.round(r.hours_21_to_18 * 60))}</td></tr>`).join("")}</tbody></table>
+      <span class="small muted">Estimé d'après les nuits mesurées : plus il fait froid dehors, plus la maison perd vite.</span>` : ""}
+  </section>`;
+}
+
+function fumesCard() {
+  const f = S.insights?.fumes;
+  if (!f) return `<section class="card"><h2>Fumées</h2><span class="muted">Pas encore de relevé avec le poêle en marche.</span></section>`;
+  const pts = f.days.slice(-30), W = 340, H = 90, L = 30, B = 16, vals = pts.map((d) => d.avg);
+  const lo = Math.floor(Math.min(...vals) / 10) * 10 - 10, hi = Math.ceil(Math.max(...vals) / 10) * 10 + 10;
+  const X = (i) => L + (pts.length > 1 ? (i / (pts.length - 1)) * (W - L - 8) : (W - L) / 2), Y = (v) => 6 + (1 - (v - lo) / (hi - lo)) * (H - B - 6);
+  const since = f.since ? new Date(f.since + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+  const verdict = f.change == null ? `<span class="small muted">La comparaison à puissance égale arrive après deux semaines de relevés.</span>`
+    : f.change >= 15 ? `<span class="warn">À puissance égale, fumées plus chaudes de <strong>${f.change} °C</strong> que la semaine du ${since} : l'échangeur s'encrasse peut-être, pense au nettoyage.</span>`
+    : `<span>À puissance égale : <strong class="num">${f.change > 0 ? "+" : f.change < 0 ? "−" : ""}${Math.abs(f.change)} °C</strong> par rapport à la semaine du ${since}${Math.abs(f.change) < 10 ? " : stable" : " : à surveiller"}.</span>`;
+  return `<section class="card"><div class="row spread"><h2>Fumées</h2><span class="num"><strong>${pts[pts.length - 1].avg} °C</strong> <span class="small muted">en moyenne aujourd'hui</span></span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Température moyenne des fumées par jour">
+      ${[lo, hi].map((v) => `<line class="grid" x1="${L}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/><text x="0" y="${Y(v) + 3}">${v}°</text>`).join("")}
+      ${pts.length > 1 ? `<polyline points="${pts.map((d, i) => `${X(i).toFixed(1)},${Y(d.avg).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--warn)" stroke-width="2"/>` : ""}
+      ${pts.map((d, i) => `<circle cx="${X(i)}" cy="${Y(d.avg)}" r="${i === pts.length - 1 ? 4 : 2.5}" fill="var(--warn)"/>`).join("")}
+      <text x="${L}" y="${H - 3}">${new Date(pts[0].date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</text>
+      <text x="${W - 2}" y="${H - 3}" text-anchor="end">aujourd'hui</text>
+    </svg>
+    ${verdict}
+    <span class="small muted">Moyenne par jour, poêle en marche stable. Des fumées plus chaudes à puissance égale, c'est de la chaleur qui part dans le conduit au lieu de la pièce.</span>
+  </section>`;
+}
+
+function priceDialog() {
+  const p = S.insights?.price;
+  openDialog(`<header><h2>Prix des pellets</h2><button data-x>Fermer</button></header>
+    <span class="small muted">Recopie ta facture : le total payé (livraison comprise) et le nombre de sacs.</span>
+    <label class="field"><span>Total payé (€)</span><input id="pt" type="number" inputmode="decimal" min="0" step="0.01" value="${p ? p.bag_eur : ""}"></label>
+    <div class="times"><label class="field"><span>Nombre de sacs</span><input id="pn" type="number" inputmode="numeric" min="1" step="1" value="1"></label>
+      <label class="field"><span>Poids d'un sac (kg)</span><input id="pk" type="number" inputmode="decimal" min="5" max="30" step="0.5" value="${p ? p.bag_kg : 15}"></label></div>
+    <strong id="pr" class="num"></strong>
+    <button class="primary big" data-go>Enregistrer</button>
+    <span class="small" id="perr"></span>`, (el) => {
+    const read = () => { const t = Number(el.querySelector("#pt").value), n = Number(el.querySelector("#pn").value) || 1, k = Number(el.querySelector("#pk").value) || 15;
+      return { bag: t / n, kg: k }; };
+    const show = () => { const { bag, kg } = read(); el.querySelector("#pr").textContent = bag > 0 ? `= ${fr(bag, 2)} € le sac · ${fr(bag / kg, 3)} € le kg` : ""; };
+    el.querySelectorAll("input").forEach((i) => (i.oninput = show));
+    el.querySelector("[data-x]").onclick = closeDialog;
+    el.querySelector("[data-go]").onclick = async () => {
+      const { bag, kg } = read();
+      try { await api("/api/settings/pellet-price", { method: "PUT", body: { bag_eur: Math.round(bag * 100) / 100, bag_kg: kg } }); closeDialog(); loadCharts(); }
+      catch (e) { el.querySelector("#perr").textContent = e.message; el.querySelector("#perr").className = "small err"; }
+    };
+    show();
+  });
+}
+
+function loginView() {
+  return `<header class="top"><h1>Poêle</h1></header>
+  <form class="card" id="login" autocomplete="on">
+    <h2>Connexion</h2>
+    <label class="small muted" for="lu">Identifiant</label><input id="lu" name="username" autocomplete="username" autocapitalize="none" required>
+    <label class="small muted" for="lp">Mot de passe</label><input id="lp" name="password" type="password" autocomplete="current-password" required>
+    <button class="primary big" type="submit">Se connecter</button>
+    <span class="small err" id="lerr"></span>
+  </form>`;
+}
+
+const ORIGINS = { app: ["App", "var(--accent)"], planning: ["Planning", "var(--ok)"], vacances: ["Vacances", "var(--cool)"],
+                  externe: ["Ailleurs", "var(--maestro)"], poele: ["Poêle", "var(--bad)"], garde: ["Garde", "var(--cold)"] };
+const OUTCOMES = { ok: ["✓ confirmé", "okc"], noop: ["= déjà fait", "muted"], failed: ["✗ échec", "err"], skipped: ["↷ sauté", "muted"], info: ["", ""] };
+function journalView() {
+  const groups = new Map();
+  for (const e of S.journal) { const k = cap(fmtDay(new Date(e.ts * 1000))); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
+  const row = (e) => { const [name, color] = ORIGINS[e.origin] || [e.origin, "var(--muted)"], [badge, cls] = OUTCOMES[e.outcome] || ["", ""];
+    return `<div class="list-item"><span class="jtime">${new Date(e.ts * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+      <div class="grow"><div class="row wrap" style="gap:8px"><strong>${esc(e.label)}</strong><span class="tag" style="--c:${color}">${name}</span></div>
+      ${e.detail ? `<div class="small muted">${esc(e.detail)}</div>` : ""}</div>${badge ? `<span class="badge ${cls}">${badge}</span>` : ""}</div>`; };
+  return `
+  <header class="top"><h1>Journal</h1><div class="seg" style="width:180px">${[[1, "24 h"], [7, "7 j"], [30, "30 j"]].map(([d, l]) => `<button data-act="jdays" data-v="${d}" aria-pressed="${S.jdays === d}">${l}</button>`).join("")}</div></header>
+  <span class="small muted">Qui a allumé, éteint ou changé la consigne. <span class="tag" style="--c:var(--maestro)">Ailleurs</span> = Maestro, le bouton du poêle ou la télécommande : l'état a changé sans commande de notre part.</span>
+  ${S.journalError ? `<span class="small err">${esc(S.journalError)}</span>` : ""}
+  ${S.journal.length ? [...groups].map(([day, items]) => `<section class="card"><h2>${esc(day)}</h2><div>${items.map(row).join("")}</div></section>`).join("")
+    : `<section class="card"><span class="muted">Rien sur cette période. Les prochains allumages, extinctions et changements de consigne s'afficheront ici.</span></section>`}`;
+}
+
+function render() {
+  const main = document.getElementById("app");
+  document.querySelector("nav.tabs").hidden = S.needLogin;
+  if (S.needLogin) {
+    if (!document.getElementById("login")) {
+      main.innerHTML = loginView();
+      document.getElementById("login").onsubmit = async (ev) => {
+        ev.preventDefault();
+        const err = document.getElementById("lerr");
+        try {
+          const r = await api("/api/login", { method: "POST", body: { username: document.getElementById("lu").value, password: document.getElementById("lp").value } });
+          store.set("mcz.token", r.token); S.needLogin = false; render(); await refresh(); loadWeather();
+        } catch (e) { err.textContent = e.message; }
+      };
+    }
+    return;
+  }
+  main.innerHTML = S.tab === "home" ? homeView() : S.tab === "planning" ? planningView() : S.tab === "journal" ? journalView() : chartsView();
+  if (S.hover && S.tab === "charts") showTip(S.hover.id, S.hover.cx, S.hover.cy);
+  document.querySelectorAll("nav.tabs button").forEach((b) => b.setAttribute("aria-current", b.dataset.tab === S.tab ? "page" : "false"));
+}
+
+// ---------- Fenêtres ----------
+const dlg = document.getElementById("dlg"), dlgBody = document.getElementById("dlgBody");
+// Champ heure / date : sur iPhone, la roue envoie « change » à chaque cran ; redessiner la fenêtre la refermerait.
+// On garde la valeur tout de suite, et on ne redessine qu'une fois la roue validée (champ quitté). Le léger délai laisse
+// passer un appui direct sur « Enregistrer » (qui lit la valeur déjà gardée) avant le redessin.
+function onTime(input, keep, draw) {
+  let pending = false;
+  input.onchange = (e) => { if (!e.target.value) return; keep(e.target.value); if (document.activeElement === input) pending = true; else draw(); };
+  input.onblur = () => { if (pending || !input.value) setTimeout(() => { if (input.isConnected) draw(); }, 250); pending = false; };
+}
+function openDialog(html, onReady) { dlgBody.innerHTML = html; if (!dlg.open) dlg.showModal(); onReady && onReady(dlgBody); }
+function closeDialog() { dlg.close(); }
+
+function timerDialog() {
+  const d = new Date(Date.now() + 3600000);
+  openDialog(`<header><h2>Heure précise</h2><button data-x>Fermer</button></header>
+    <div class="seg"><button data-a="off" aria-pressed="true">Éteindre</button><button data-a="on" aria-pressed="false">Allumer</button></div>
+    <input type="time" id="tt" step="60" value="${toHHMM(d.getHours() * 60 + d.getMinutes())}" aria-label="Heure">
+    <div class="row">${[1, 2, 3, 4].map((h) => `<button data-plus="${h}" style="flex:1">+${h} h</button>`).join("")}</div>
+    <button class="primary big" data-go>Programmer</button>
+    <span class="small muted" id="terr">Le serveur le fait à l'heure dite, même ordinateur ou téléphone éteint, et vérifie que le poêle a obéi.</span>`, (el) => {
+    let action = "off";
+    const label = () => { const v = el.querySelector("#tt").value; const later = toMin(v) <= new Date().getHours() * 60 + new Date().getMinutes();
+      el.querySelector("[data-go]").textContent = `${action === "off" ? "Éteindre" : "Allumer"} à ${v}${later ? " (demain)" : ""}`; };
+    el.querySelectorAll("[data-a]").forEach((b) => (b.onclick = () => { action = b.dataset.a; el.querySelectorAll("[data-a]").forEach((x) => x.setAttribute("aria-pressed", x === b)); label(); }));
+    el.querySelectorAll("[data-plus]").forEach((b) => (b.onclick = () => { const t = new Date(Date.now() + b.dataset.plus * 3600000); el.querySelector("#tt").value = toHHMM(t.getHours() * 60 + t.getMinutes()); label(); }));
+    el.querySelector("#tt").oninput = label;
+    el.querySelector("[data-x]").onclick = closeDialog;
+    el.querySelector("[data-go]").onclick = async () => {
+      try { await api(`/api/stoves/${sid()}/timers`, { method: "POST", body: { action, time: el.querySelector("#tt").value } }); closeDialog(); await refresh(); loadPlanning(); }
+      catch (e) { el.querySelector("#terr").textContent = e.message; el.querySelector("#terr").className = "small err"; }
+    };
+    label();
+  });
+}
+
+// Allumer comme éteindre se confirment : un appui de trop sur le gros bouton ne doit rien déclencher.
+function powerDialog() {
+  const s = S.snap, on = !s.running;
+  const next = (S.overview.upcoming || []).find((e) => e.kind === (on ? "off" : "on"));
+  const facts = on ? `Il fait ${fmtT(s.ambient)} dans la pièce, consigne ${fmtT(s.setpoint)}. Le poêle met une dizaine de minutes à démarrer.`
+                   : `Il fait ${fmtT(s.ambient)} dans la pièce. Le poêle se refroidit quelques minutes avant de s'arrêter complètement.`;
+  openDialog(`<header><h2>${on ? "Allumer le poêle ?" : "Éteindre le poêle ?"}</h2></header>
+    <span>${facts}</span>
+    ${next ? `<span class="small muted">Prochain ${on ? "arrêt" : "allumage"} prévu : ${esc(when(next.ts))}${next.label && !["Allumage", "Extinction"].includes(next.label) ? ` · ${esc(next.label)}` : ""}.</span>` : ""}
+    <div class="row"><button data-x style="flex:1">Annuler</button><button class="primary" data-go style="flex:1">⏻ ${on ? "Allumer" : "Éteindre"}</button></div>`, (el) => {
+    el.querySelector("[data-x]").onclick = closeDialog;
+    el.querySelector("[data-go]").onclick = () => { closeDialog(); send("power", on, on ? "Allumage" : "Extinction"); };
+    el.querySelector("[data-x]").focus();
+  });
+}
+
+function anticipatedStart(p, iso) {
+  const e = S.overview.upcoming.find((x) => x.target_ts && isoLocal(new Date(x.target_ts * 1000)) === iso
+    && toHHMM(new Date(x.target_ts * 1000).getHours() * 60 + new Date(x.target_ts * 1000).getMinutes()) === p.start);
+  return e ? new Date(e.ts * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
+}
+function dayDialog(day, iso) {
+  iso = iso || isoLocal(nextDateFor(day));
+  const [y, mo, da] = iso.split("-").map(Number), dateObj = new Date(y, mo - 1, da);
+  const slots = S.plages.filter((p) => p.days.includes(day)).sort((a, b) => toMin(a.start) - toMin(b.start));
+  const offi = (S.official?.slots || []).filter((o) => o.day === day);
+  const skipped = (S.overview.skips || []).includes(iso);
+  openDialog(`<header><h2>${DAYS[day]}</h2><button data-x>OK</button></header>
+    ${barHTML(segmentsFor(day, S.plages))}
+    ${slots.some((p) => p.enabled) ? `<div class="card notice" style="--c:${skipped ? "var(--muted)" : "var(--mild)"};padding:12px 16px">
+      <label class="row spread"><span>Pas d'allumage le <strong>${esc(fmtDay(dateObj))}</strong></span><input type="checkbox" data-skipday ${skipped ? "checked" : ""}></label>
+      <span class="small muted">Ce jour-là seulement : les plages ne changent pas et reprennent la fois suivante.</span></div>` : ""}
+    <div class="card" style="padding:12px 16px">
+      ${slots.length ? slots.map((p) => `<div class="list-item">
+        <div class="grow"><strong class="num" style="font-size:19px">${p.anticipate ? "Chaud à " : ""}${p.start} → ${p.end}</strong><div class="small muted">${dur(toMin(p.start), toMin(p.end))}${p.setpoint != null ? ` · ${p.setpoint.toFixed(1)} °C` : ""}${p.days.length > 1 ? ` · ${p.days.map((x) => DAYS[x].slice(0, 3)).join(" ")}` : ""}</div>
+        ${p.anticipate ? `<div class="small" style="color:var(--accent)">Démarrage anticipé${anticipatedStart(p, iso) ? ` prévu vers ${anticipatedStart(p, iso)}` : ""}</div>` : ""}</div>
+        <label class="small"><input type="checkbox" data-en="${p.id}" ${p.enabled ? "checked" : ""}> active</label>
+        <button data-edit="${p.id}">Modifier</button>
+        <button class="err" data-rm="${p.id}" aria-label="Supprimer la plage ${p.start} → ${p.end}" title="Supprimer">🗑</button></div>`).join("") : `<span class="muted">Poêle éteint toute la journée.</span>`}
+      <button class="link" data-add>＋ Ajouter une plage</button>
+    </div>
+    ${slots.length ? `<div class="row wrap"><span class="small muted">Copier ce jour vers :</span><button data-copy="0,1,2,3,4">Semaine</button><button data-copy="5,6">Week-end</button><button data-copy="0,1,2,3,4,5,6">Tous</button></div>` : ""}
+    ${S.official ? `<div class="card" style="padding:12px 16px"><strong>Programme de l'app Maestro</strong>${offi.length ? offi.map((o) => `<div class="kv num"><span>${o.start} → ${o.end}</span><span>${o.setpoint != null ? o.setpoint.toFixed(1) + " °C" : ""}</span></div>`).join("") : `<span class="muted small">Aucun créneau ce jour-là.</span>`}
+      <span class="small muted">${S.official.enabled === true ? "Actif : il s'applique en plus de tes plages." : "Affiché pour comparaison."}</span></div>` : ""}
+    <span class="small err" id="derr"></span>`, (el) => {
+    el.querySelector("[data-x]").onclick = closeDialog;
+    const sk = el.querySelector("[data-skipday]");
+    if (sk) sk.onchange = async () => { try { await api(`/api/schedule/skips/${iso}`, { method: sk.checked ? "PUT" : "DELETE" }); } catch (e) { toast(e.message, "bad"); }
+                                         await loadPlanning(); dayDialog(day, iso); };
+    el.querySelector("[data-add]").onclick = () => slotDialog(day, null);
+    el.querySelectorAll("[data-edit]").forEach((b) => (b.onclick = () => slotDialog(day, S.plages.find((p) => p.id == b.dataset.edit))));
+    // Supprimer depuis la liste du jour : une plage partagée avec d'autres jours n'est retirée que de ce jour-là.
+    el.querySelectorAll("[data-rm]").forEach((b) => (b.onclick = async () => {
+      const p = S.plages.find((x) => x.id == b.dataset.rm), others = p.days.filter((d) => d !== day);
+      if (!confirm(`Supprimer la plage ${p.start} → ${p.end} du ${DAYS[day].toLowerCase()} ?`
+        + (others.length ? `\nElle reste les autres jours (${others.map((x) => DAYS[x].slice(0, 3)).join(" ")}).` : ""))) return;
+      try { await removeDays(p, [day]); } catch (e) { toast(e.message, "bad"); }
+      await loadPlanning(); dayDialog(day, iso);
+    }));
+    el.querySelectorAll("[data-en]").forEach((c) => (c.onchange = async () => { const p = S.plages.find((x) => x.id == c.dataset.en); await savePlage({ ...p, enabled: c.checked }); dayDialog(day); }));
+    el.querySelectorAll("[data-copy]").forEach((b) => (b.onclick = async () => { await copyDay(day, b.dataset.copy.split(",").map(Number)); dayDialog(day); }));
+  });
+}
+
+async function savePlage(p) {
+  const body = { name: p.name || "Chauffage", days: p.days, start: p.start, end: p.end, setpoint: p.setpoint ?? null, mode: p.mode ?? null, enabled: p.enabled, anticipate: !!p.anticipate };
+  if (p.id != null) await api(`/api/plages/${p.id}`, { method: "PUT", body }); else await api("/api/plages", { method: "POST", body });
+  await loadPlanning();
+}
+async function removeDays(p, days) {
+  const rest = p.days.filter((d) => !days.includes(d));
+  if (!rest.length) await api(`/api/plages/${p.id}`, { method: "DELETE" }); else await api(`/api/plages/${p.id}`, { method: "PUT", body: { ...p, days: rest } });
+}
+async function copyDay(day, targets) {
+  targets = targets.filter((d) => d !== day);
+  const src = S.plages.filter((p) => p.days.includes(day));
+  for (const p of S.plages.filter((p) => p.days.some((d) => targets.includes(d)))) await removeDays(p, targets);
+  for (const p of src) await api("/api/plages", { method: "POST", body: { ...p, id: undefined, days: targets } });
+  await loadPlanning();
+}
+
+function slotDialog(day, original) {
+  const multi = (original?.days.length || 0) > 1;
+  const st = { start: original ? toMin(original.start) : 420, end: original ? toMin(original.end) : 540, setpoint: original ? original.setpoint : 21,
+               mode: original?.mode || "", days: original ? [...original.days] : [day], dayOnly: multi, anticipate: !!original?.anticipate };
+  const model = () => { const m = S.overview.anticipation; if (!m) return "";
+    return m.episodes ? `Appris sur ${m.episodes} allumage${m.episodes > 1 ? "s" : ""} : environ ${m.startup_min} min pour démarrer, puis +${String(m.rate_per_hour).replace(".", ",")} °C par heure.`
+                      : `Estimation prudente (${m.startup_min} min pour démarrer, +${String(m.rate_per_hour).replace(".", ",")} °C/h) en attendant d'avoir observé quelques allumages.`; };
+  const draw = () => openDialog(`<header><button data-x>Annuler</button><h2>${original ? "Plage" : "Nouvelle plage"}</h2><button class="primary" data-save ${st.start === st.end ? "disabled" : ""}>Enregistrer</button></header>
+    ${barHTML(st.start < st.end ? [[st.start, st.end, true]] : [[st.start, 1440, true], [0, st.end, true]])}
+    <div class="times">
+      <div><span class="small muted">${st.anticipate ? "Chaud à" : "Allumage"}</span><input type="time" step="60" id="ts" value="${toHHMM(st.start)}"><div class="nudges"><button data-n="start" data-v="-5">−5</button><button data-n="start" data-v="5">+5</button></div></div>
+      <div><span class="small muted">Extinction</span><input type="time" step="60" id="te" value="${toHHMM(st.end)}"><div class="nudges"><button data-n="end" data-v="-5">−5</button><button data-n="end" data-v="5">+5</button></div></div>
+    </div>
+    <span class="small muted" style="text-align:center">Chauffe ${dur(st.start, st.end)}${st.end <= st.start ? ", jusqu'au lendemain" : ""}</span>
+    <div class="card"><label class="row spread"><span>Avoir déjà chaud à ${toHHMM(st.start)}</span><input type="checkbox" id="antic" ${st.anticipate ? "checked" : ""}></label>
+      <span class="small muted">${st.anticipate ? `Le poêle démarre assez tôt pour qu'il fasse ${(st.setpoint ?? 21).toFixed(1).replace(".", ",")} °C à ${toHHMM(st.start)}, selon la température de la pièce (3 h d'avance au plus). ${model()}`
+        : "Sinon, il s'allume pile à l'heure indiquée."}</span></div>
+    <div class="card"><label class="row spread"><span>Régler la consigne</span><input type="checkbox" id="usesp" ${st.setpoint != null ? "checked" : ""}></label>
+      ${st.setpoint != null ? `<div class="row spread"><strong class="num" style="font-size:22px">${st.setpoint.toFixed(1)} °C</strong><span class="row"><button data-spd="-0.5">−</button><button data-spd="0.5">+</button></span></div>` : ""}
+      <label class="row spread"><span>Mode</span><select id="md"><option value="">Inchangé</option>${Object.entries(MODES).map(([k, v]) => `<option value="${k}" ${st.mode === k ? "selected" : ""}>${MODE_ICONS[k]} ${v}</option>`).join("")}</select></label></div>
+    <div class="card"><strong>Jours</strong>
+      ${multi ? `<label class="row"><input type="radio" name="scope" value="1" ${st.dayOnly ? "checked" : ""}> ${DAYS[day]} seulement</label><label class="row"><input type="radio" name="scope" value="0" ${!st.dayOnly ? "checked" : ""}> Tous : ${original.days.map((x) => DAYS[x].slice(0, 3)).join(" ")}</label>` : ""}
+      ${!multi || !st.dayOnly ? `<div class="daychips">${LETTERS.map((l, d) => `<button data-day="${d}" aria-label="${DAYS[d]}" aria-pressed="${st.days.includes(d)}">${l}</button>`).join("")}</div>` : ""}</div>
+    ${original ? `<button class="err" data-del style="width:100%">🗑 Supprimer ${multi && st.dayOnly ? `pour ${DAYS[day].toLowerCase()}` : "cette plage"}</button>` : ""}
+    <span class="small err" id="serr"></span>`, (el) => {
+    el.querySelector("[data-x]").onclick = () => dayDialog(day);
+    onTime(el.querySelector("#ts"), (v) => (st.start = toMin(v)), draw);
+    onTime(el.querySelector("#te"), (v) => (st.end = toMin(v)), draw);
+    el.querySelectorAll("[data-n]").forEach((b) => (b.onclick = () => { st[b.dataset.n] = (st[b.dataset.n] + Number(b.dataset.v) + 1440) % 1440; draw(); }));
+    el.querySelector("#usesp").onchange = (e) => { st.setpoint = e.target.checked ? (st.setpoint ?? 21) : null; if (!e.target.checked) st.anticipate = false; draw(); };
+    el.querySelector("#antic").onchange = (e) => { st.anticipate = e.target.checked; if (st.anticipate && st.setpoint == null) st.setpoint = 21; draw(); };
+    el.querySelectorAll("[data-spd]").forEach((b) => (b.onclick = () => { st.setpoint = Math.min(40, Math.max(5, st.setpoint + Number(b.dataset.spd))); draw(); }));
+    el.querySelector("#md").onchange = (e) => (st.mode = e.target.value);
+    el.querySelectorAll("[name=scope]").forEach((r) => (r.onchange = () => { st.dayOnly = r.value === "1" && r.checked; draw(); }));
+    el.querySelectorAll("[data-day]").forEach((b) => (b.onclick = () => { const d = Number(b.dataset.day); st.days = st.days.includes(d) ? st.days.filter((x) => x !== d) : [...st.days, d].sort(); draw(); }));
+    const del = el.querySelector("[data-del]");
+    if (del) del.onclick = async () => {
+      if (!confirm(`Supprimer la plage ${original.start} → ${original.end}${multi && st.dayOnly ? ` du ${DAYS[day].toLowerCase()}` : multi ? " de tous ses jours" : ""} ?`)) return;
+      try { await removeDays(original, multi && st.dayOnly ? [day] : original.days); } catch (e) { el.querySelector("#serr").textContent = e.message; return; }
+      await loadPlanning(); dayDialog(day);
+    };
+    el.querySelector("[data-save]").onclick = async () => {
+      const p = { ...(original || { name: "Chauffage", enabled: true }), start: toHHMM(st.start), end: toHHMM(st.end), setpoint: st.setpoint, mode: st.mode || null, anticipate: st.anticipate };
+      try {
+        if (multi && st.dayOnly) {        // « ce jour seulement » : on détache ce jour de la règle d'origine
+          await removeDays(original, [day]);
+          await api("/api/plages", { method: "POST", body: { ...p, id: undefined, days: [day] } });
+          await loadPlanning();
+        } else {
+          if (!st.days.length) throw new Error("Choisis au moins un jour.");
+          await savePlage({ ...p, days: st.days });
+        }
+        dayDialog(day);
+      } catch (e) { el.querySelector("#serr").textContent = e.message; }
+    };
+  });
+  draw();
+}
+
+function pauseDialog() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  openDialog(`<header><h2>Pause</h2><button data-x>Fermer</button></header>
+    <span class="muted">Aucun allumage des plages jusqu'au soir du jour choisi. Les extinctions prévues continuent, et les plages reprennent ensuite toutes seules.</span>
+    <div class="card field"><label for="pd" class="small muted">Jusqu'au (inclus)</label><input type="date" id="pd" value="${isoLocal(d)}" min="${isoLocal(new Date())}">
+      <div class="row wrap">${[[0, "Aujourd'hui"], [1, "Demain"], [3, "+3 jours"], [7, "+1 semaine"]].map(([n, l]) => `<button data-pp="${n}">${l}</button>`).join("")}</div></div>
+    <button class="primary big" data-go>Mettre en pause</button><span class="small err" id="perr"></span>`, (el) => {
+    el.querySelector("[data-x]").onclick = closeDialog;
+    el.querySelectorAll("[data-pp]").forEach((b) => (b.onclick = () => { const x = new Date(); x.setDate(x.getDate() + Number(b.dataset.pp)); el.querySelector("#pd").value = isoLocal(x); }));
+    el.querySelector("[data-go]").onclick = async () => {
+      const [y, m, dd] = el.querySelector("#pd").value.split("-").map(Number);
+      try { await api("/api/schedule/absence", { method: "PUT", body: { kind: "pause", end_ts: new Date(y, m - 1, dd + 1).getTime() / 1000 } });
+            closeDialog(); toast("Pause programmée", "ok"); loadPlanning(); }
+      catch (e) { el.querySelector("#perr").textContent = e.message; }
+    };
+  });
+}
+function vacationDialog() {
+  const back = new Date(); back.setDate(back.getDate() + 7); back.setHours(18, 0, 0, 0);
+  const st = { start: localInput(new Date()), end: localInput(back), preheat: 120, sp: 21, off: true };
+  const draw = () => {
+    const end = new Date(st.end), start = new Date(st.start), heat = new Date(end.getTime() - st.preheat * 60000);
+    const ok = !isNaN(end) && !isNaN(start) && end > start;
+    const summary = !ok ? `<span class="err">Le retour doit être après le départ.</span>`
+      : `${st.off ? `Le poêle s'éteint le <strong>${esc(fmtDT(start / 1000))}</strong>, puis reste éteint` : "Aucun allumage des plages"}`
+        + (st.preheat ? `. Il se rallume le <strong>${esc(fmtDT(heat / 1000))}</strong> pour qu'il fasse ${st.sp.toFixed(1).replace(".", ",")} °C à ton retour (${esc(fmtDT(end / 1000))}).`
+                      : ` jusqu'au retour (${esc(fmtDT(end / 1000))}), sans préchauffage.`);
+    openDialog(`<header><h2>Vacances</h2><button data-x>Fermer</button></header>
+      <div class="card field"><label for="vs" class="small muted">Départ</label><input type="datetime-local" id="vs" value="${st.start}">
+        <label class="row spread"><span>Éteindre le poêle au départ</span><input type="checkbox" id="voff" ${st.off ? "checked" : ""}></label></div>
+      <div class="card field"><label for="ve" class="small muted">Retour</label><input type="datetime-local" id="ve" value="${st.end}">
+        <span class="small muted">Rallumer avant le retour</span>
+        <div class="seg">${[[0, "Non"], [60, "1 h"], [120, "2 h"], [180, "3 h"], [240, "4 h"]].map(([v, l]) => `<button data-ph="${v}" aria-pressed="${st.preheat === v}">${l}</button>`).join("")}</div>
+        ${st.preheat ? `<div class="row spread"><span>Température à l'arrivée</span><span class="row"><button data-spd="-0.5" aria-label="Moins">−</button><strong class="num">${st.sp.toFixed(1)} °C</strong><button data-spd="0.5" aria-label="Plus">+</button></span></div>` : ""}</div>
+      <div class="card"><span>${summary}</span></div>
+      <button class="primary big" data-go ${ok ? "" : "disabled"}>Programmer les vacances</button><span class="small err" id="verr"></span>`, (el) => {
+      el.querySelector("[data-x]").onclick = closeDialog;
+      onTime(el.querySelector("#vs"), (v) => (st.start = v), draw);
+      onTime(el.querySelector("#ve"), (v) => (st.end = v), draw);
+      el.querySelector("#voff").onchange = (e) => { st.off = e.target.checked; draw(); };
+      el.querySelectorAll("[data-ph]").forEach((b) => (b.onclick = () => { st.preheat = Number(b.dataset.ph); draw(); }));
+      el.querySelectorAll("[data-spd]").forEach((b) => (b.onclick = () => { st.sp = Math.min(30, Math.max(10, st.sp + Number(b.dataset.spd))); draw(); }));
+      el.querySelector("[data-go]").onclick = async () => {
+        try { await api("/api/schedule/absence", { method: "PUT", body: { kind: "vacances", start_ts: new Date(st.start).getTime() / 1000, end_ts: new Date(st.end).getTime() / 1000,
+                                                                           preheat_minutes: st.preheat, setpoint: st.sp, off_at_start: st.off } });
+              closeDialog(); toast("Vacances programmées", "ok"); loadPlanning(); }
+        catch (e) { el.querySelector("#verr").textContent = e.message; }
+      };
+    });
+  };
+  draw();
+}
+
+function settingsDialog() {
+  openDialog(`<header><h2>Réglages</h2><button data-x>Fermer</button></header>
+    ${S.loginEnabled ? `<div class="card"><strong>Compte</strong><span class="small muted">Connecté sur ce navigateur (90 jours).</span><button data-logout>Se déconnecter</button></div>`
+    : `<div class="card"><strong>Jeton du serveur</strong><input type="password" id="tok" autocomplete="off" value="${esc(store.get("mcz.token"))}" placeholder="BRIDGE_TOKEN">
+      <div class="row"><button class="primary" data-save>Enregistrer</button><button data-test>Tester la connexion</button></div><span class="small" id="tres"></span>
+      <span class="small muted">Gardé dans ce navigateur seulement.</span></div>`}
+    <div class="card"><strong>Notifications</strong><div id="pushbox" class="field"><span class="small muted">Vérification…</span></div></div>
+    <div class="card"><strong>Météo</strong><div class="row"><input id="city" placeholder="Ville (ex. Colmar)" style="flex:1"><button data-city>OK</button></div>
+      <button data-geo>📍 Utiliser la position de cet appareil</button><span class="small" id="wres"></span>
+      <span class="small muted">La position sert uniquement à la météo. Elle est gardée par ton serveur.</span></div>
+    <div class="card"><strong>Thème</strong><div class="seg">${[["", "Système"], ["light", "Clair"], ["dark", "Sombre"]].map(([v, l]) => `<button data-theme="${v}" aria-pressed="${(store.get("mcz.theme") || "") === v}">${l}</button>`).join("")}</div></div>`, (el) => {
+    el.querySelector("[data-x]").onclick = closeDialog;
+    const logout = el.querySelector("[data-logout]");
+    if (logout) logout.onclick = async () => { try { await api("/api/logout", { method: "POST" }); } catch {} store.set("mcz.token", ""); closeDialog(); S.needLogin = true; render(); };
+    const save = el.querySelector("[data-save]");
+    if (save) save.onclick = () => { store.set("mcz.token", el.querySelector("#tok").value.trim()); closeDialog(); refresh(); loadWeather(); };
+    const test = el.querySelector("[data-test]");
+    if (test) test.onclick = async () => { const r = el.querySelector("#tres"); store.set("mcz.token", el.querySelector("#tok").value.trim());
+      try { await api("/api/stoves"); r.textContent = "Connexion réussie."; r.className = "small okc"; } catch (e) { r.textContent = e.message; r.className = "small err"; } };
+    const setLoc = async (loc) => { const r = el.querySelector("#wres");
+      try { await api("/api/settings/weather-location", { method: "PUT", body: loc }); r.textContent = `Météo réglée sur ${loc.name}.`; r.className = "small okc"; loadWeather(); }
+      catch (e) { r.textContent = e.message; r.className = "small err"; } };
+    el.querySelector("[data-city]").onclick = async () => { const r = el.querySelector("#wres");
+      try { await setLoc(await api(`/api/settings/weather-location/search?name=${encodeURIComponent(el.querySelector("#city").value)}`)); } catch (e) { r.textContent = e.message; r.className = "small err"; } };
+    el.querySelector("[data-geo]").onclick = () => { const r = el.querySelector("#wres");
+      if (!navigator.geolocation) { r.textContent = "Position non disponible : tape plutôt la ville."; return; }
+      navigator.geolocation.getCurrentPosition((p) => setLoc({ name: "Position de l'appareil", lat: p.coords.latitude, lon: p.coords.longitude }),
+        () => { r.textContent = "Accès à la position refusé : tape plutôt la ville."; r.className = "small err"; }, { timeout: 15000 }); };
+    el.querySelectorAll("[data-theme]").forEach((b) => (b.onclick = () => { store.set("mcz.theme", b.dataset.theme); applyTheme(); settingsDialog(); }));
+    pushBox(el.querySelector("#pushbox"));
+  });
+}
+
+// ---------- Notifications (Web Push) ----------
+const PUSH_KINDS = [["alarm", "Poêle en alarme"], ["failed", "Allumage ou extinction automatique raté"], ["guard", "Garde : rallumage et extinction"],
+  ["cold", "Pièce sous le seuil de la garde, poêle éteint"], ["offline", "Poêle injoignable depuis 30 min"], ["pellet", "Réservoir bas (capteur du poêle)"],
+  ["fumes", "Nettoyage conseillé (fumées plus chaudes)"], ["external", "Allumé ou éteint ailleurs (Maestro, bouton)"]];
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+const deviceLabel = () => { const u = navigator.userAgent; return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || isIOS() ? "iPad" : /Android/.test(u) ? "Android" : /Mac/.test(u) ? "Mac" : "Navigateur"; };
+const keyBytes = (b64) => { const s = atob(b64.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64.length + 3) % 4)); return Uint8Array.from(s, (c) => c.charCodeAt(0)); };
+async function pushReg() { return navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready); }
+async function pushBox(box) {
+  if (!box) return;
+  const say = (html) => { box.innerHTML = html; };
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    return say(isIOS() && !standalone()
+      ? `<span>Sur iPhone, les notifications passent par l'app installée : dans Safari, <strong>Partager → Sur l'écran d'accueil</strong>, puis ouvre « Poêle » depuis cette icône et reviens ici.</span>`
+      : `<span class="muted">Ce navigateur ne gère pas les notifications.</span>`);
+  }
+  let reg, sub = null, prefs = null, devices = 0;
+  try { reg = await pushReg(); sub = await reg.pushManager.getSubscription(); } catch (e) { return say(`<span class="small err">${esc(e.message)}</span>`); }
+  try { [prefs, { devices }] = await Promise.all([api("/api/settings/notify"), api("/api/push/key")]); } catch (e) { return say(`<span class="small err">${esc(e.message)}</span>`); }
+  const denied = Notification.permission === "denied";
+  say(`${sub ? `<span class="okc">✓ Activées sur cet appareil</span><div class="row wrap"><button data-ptest>Envoyer un essai</button><button data-poff>Désactiver ici</button></div>`
+      : denied ? `<span class="warn">Notifications refusées pour ce site : autorise-les dans les réglages du navigateur, puis reviens ici.</span>`
+      : `<button class="primary" data-pon>🔔 Activer sur cet appareil</button>`}
+    <span class="small" id="pres"></span>
+    ${sub || devices ? `<span class="small muted">Prévenir pour (sur ${devices} appareil${devices > 1 ? "s" : ""}) :</span>
+      ${PUSH_KINDS.map(([k, l]) => `<label class="row"><input type="checkbox" data-pk="${k}" ${prefs[k] ? "checked" : ""}> <span>${l}</span></label>`).join("")}` : ""}`);
+  const res = box.querySelector("#pres"), note = (t, cls = "small") => { res.textContent = t; res.className = cls; };
+  const on = box.querySelector("[data-pon]");
+  if (on) on.onclick = async () => {
+    try {
+      if (await Notification.requestPermission() !== "granted") throw new Error("Autorisation refusée.");
+      const { key } = await api("/api/push/key");
+      const s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+      await api("/api/push/subscriptions", { method: "POST", body: { ...s.toJSON(), label: deviceLabel() } });
+      const r = await api("/api/push/test", { method: "POST", body: { endpoint: s.endpoint } });
+      await pushBox(box);
+      const res2 = box.querySelector("#pres");
+      if (!r.sent && res2) { res2.textContent = `Essai pas envoyé${r.errors?.length ? ` (${r.errors.join(" ; ")})` : ""}.`; res2.className = "small err"; }
+    } catch (e) { note(e.message, "small err"); }
+  };
+  const test = box.querySelector("[data-ptest]");
+  if (test) test.onclick = async () => { try { const r = await api("/api/push/test", { method: "POST", body: { endpoint: sub.endpoint } });
+    r.sent ? note("Essai envoyé : il doit arriver dans quelques secondes. Rien ? Regarde Réglages iPhone → Notifications → Poêle, et le mode Concentration.", "small okc")
+      : note(`Pas envoyé${r.errors?.length ? ` (${r.errors.join(" ; ")})` : ""}. Désactive puis réactive ; si ça persiste, envoie-moi ce message.`, "small err"); }
+    catch (e) { note(e.message, "small err"); } };
+  const off = box.querySelector("[data-poff]");
+  if (off) off.onclick = async () => { try { await api("/api/push/unsubscribe", { method: "POST", body: { endpoint: sub.endpoint } }); await sub.unsubscribe(); pushBox(box); }
+    catch (e) { note(e.message, "small err"); } };
+  box.querySelectorAll("[data-pk]").forEach((c) => (c.onchange = async () => {
+    try { await api("/api/settings/notify", { method: "PUT", body: { [c.dataset.pk]: c.checked } }); } catch (e) { c.checked = !c.checked; note(e.message, "small err"); } }));
+}
+function applyTheme() { const t = store.get("mcz.theme"); t ? document.documentElement.setAttribute("data-theme", t) : document.documentElement.removeAttribute("data-theme"); }
+
+// ---------- Actions ----------
+document.getElementById("app").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "settings") settingsDialog();
+  else if (act === "sp") adjustSetpoint(Number(b.dataset.d));
+  else if (act === "power") powerDialog();
+  else if (act === "mode") send("mode", b.dataset.v, `Mode ${MODES[b.dataset.v]}`);
+  else if (act === "level") send("power_level", Number(b.dataset.v), `Puissance ${b.dataset.v}`);
+  else if (act === "timer") timerDialog();
+  else if (act === "cancel-timer") { try { await api(`/api/timers/${b.dataset.id}`, { method: "DELETE" }); } catch (e) { toast(e.message, "bad"); } await refresh(); loadPlanning(); }
+  else if (act === "day") dayDialog(Number(b.dataset.d), b.dataset.date);
+  else if (act === "jdays") { S.jdays = Number(b.dataset.v); loadJournal(); }
+  else if (act === "pause") pauseDialog();
+  else if (act === "vacation") vacationDialog();
+  else if (act === "absence-cancel") { if (confirm("Annuler la pause / les vacances ? Les plages reprennent tout de suite.")) { try { await api("/api/schedule/absence", { method: "DELETE" }); } catch (e) { toast(e.message, "bad"); } loadPlanning(); } }
+  else if (act === "skip") { try { await api(`/api/schedule/skips/${b.dataset.date}`, { method: "PUT" }); toast("Pas d'allumage demain", "ok"); } catch (e) { toast(e.message, "bad"); } loadPlanning(); }
+  else if (act === "hours") { S.hours = Number(b.dataset.v); loadCharts(); }
+  else if (act === "span") { S.span = Number(b.dataset.v); render(); }
+  else if (act === "price") priceDialog();
+  else if (act === "guard") guardDialog();
+  else if (act === "threshold") { store.set("mcz.threshold", b.dataset.v); S.proj = null; render(); loadCharts(); }
+  else if (act === "relight") {
+    const ts = Number(b.dataset.ts);
+    if (confirm(`Programmer l'allumage ${when(ts)} ?`)) {
+      try { await api(`/api/stoves/${sid()}/timers`, { method: "POST", body: { action: "on", at_ts: ts } }); toast(`Allumage programmé ${when(ts)}`, "ok"); await refresh(); loadPlanning(); }
+      catch (e) { toast(e.message, "bad"); }
+    }
+  }
+  else if (act === "refill") { try { await api(`/api/stoves/${sid()}/pellets/refill`, { method: "POST", body: b.dataset.full ? { full: true } : { kg: Number(b.dataset.kg) } }); S.canUndo = true; } catch (e) { toast(e.message, "bad"); } loadCharts(); }
+  else if (act === "undo-refill") { try { await api(`/api/stoves/${sid()}/pellets/refill/last`, { method: "DELETE" }); S.canUndo = false; } catch (e) { toast(e.message, "bad"); } loadCharts(); }
+});
+const appEl = document.getElementById("app");
+const tipChart = (ev) => ev.target.closest?.("#tchart, #fchart");
+appEl.addEventListener("pointermove", (ev) => { const c = tipChart(ev); if (c) showTip(c.id, ev.clientX, ev.clientY); });
+appEl.addEventListener("pointerdown", (ev) => { const c = tipChart(ev); if (c) showTip(c.id, ev.clientX, ev.clientY); else if (S.hover) hideTip(); });
+// Souris : la bulle part quand on sort de la courbe. Doigt : elle reste jusqu'au prochain toucher ailleurs.
+appEl.addEventListener("pointerout", (ev) => {
+  const c = tipChart(ev);
+  if (ev.pointerType !== "touch" && c && !ev.relatedTarget?.closest?.(`#${c.id}`)) hideTip();
+});
+document.querySelector("nav.tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-tab]"); if (!b) return;
+  S.tab = b.dataset.tab; S.hover = null; store.set("mcz.tab", S.tab); render(); window.scrollTo(0, 0);
+  if (S.tab === "planning") loadPlanning(); if (S.tab === "charts") loadCharts(); if (S.tab === "journal") loadJournal();
+});
+
+// ---------- Démarrage ----------
+applyTheme();
+S.tab = ["home", "planning", "charts", "journal"].includes(store.get("mcz.tab")) ? store.get("mcz.tab") : "home";
+render();
+(async () => {
+  try { S.loginEnabled = (await api("/api/login")).enabled; } catch {}
+  await refresh();
+  if (S.needLogin) return;
+  loadWeather();
+  loadPlanning();                     // aussi pour l'accueil : rappel des vacances / de la pause
+  if (S.tab === "charts") loadCharts(); if (S.tab === "journal") loadJournal();
+  if (!store.get("mcz.token")) settingsDialog();
+})();
+setInterval(() => { if (document.visibilityState === "visible" && !S.busy && !S.needLogin) refresh(); }, 3000);
+setInterval(() => { if (document.visibilityState === "visible") loadWeather(); }, 30 * 60 * 1000);
+setInterval(() => { if (document.visibilityState === "visible" && !S.needLogin && S.tab === "journal") loadJournal(); }, 20000);
+</script>
+</body>
+</html>
